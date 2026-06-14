@@ -155,7 +155,18 @@ export const api = {
     fd.append("file", file);
     return this.postForm<{ ok: boolean; ref: string }>("/api/library/upload", fd);
   },
+  // 首页/历史：真实统计（状态计数 + 磁盘占用）。
+  stats() {
+    return this.get<StatsResp>("/api/stats");
+  },
 };
+
+export interface StatsResp {
+  counts: { total: number; draft: number; rendering: number; done: number; failed: number };
+  usedBytes: number;
+  diskFree: number;
+  diskTotal: number;
+}
 
 // 库文件 URL（自定义风格主图 / 角色图）。
 export function libraryFileUrl(ref: string) {
@@ -295,6 +306,76 @@ export function railIndex(stage: Stage, type: VideoType): number {
   };
   const key = map[stage];
   return railFor(type).findIndex((s) => s.k === key);
+}
+
+/* ---------- 统一状态系统（design/DESIGN.md §6）---------- */
+// 项目级状态：从 stage 派生（草稿/渲染中/已完成/失败）。
+export type ProjStatusKey = "draft" | "rendering" | "done" | "failed";
+export function projectStatus(stage: Stage): { key: ProjStatusKey; label: string; cls: string } {
+  if (stage === "done") return { key: "done", label: "已完成", cls: "ok" };
+  if (stage === "failed") return { key: "failed", label: "失败", cls: "err" };
+  if (["rendering", "assembling", "qa", "drafting", "storyboarding", "scripting"].includes(stage))
+    return { key: "rendering", label: "渲染中", cls: "progress" };
+  return { key: "draft", label: "草稿", cls: "pending" };
+}
+
+// 阶段（鼠标可读的当前所在闸门/流程位置）。
+export function stageLabel(st: Stage): string {
+  const map: Partial<Record<Stage, string>> = {
+    done: "已完成",
+    storyboard: "分镜确认",
+    rendering: "分段预览",
+    concept: "方向确认",
+    script: "讲稿确认",
+    final: "最终检查",
+    failed: "失败",
+    ingesting: "内容准备",
+    decomposing: "内容准备",
+    briefing: "内容准备",
+    scripting: "讲稿确认",
+    storyboarding: "分镜确认",
+    drafting: "分镜确认",
+    assembling: "最终检查",
+    qa: "最终检查",
+  };
+  return map[st] || st;
+}
+
+// 镜头/分段级状态（SceneStatus）→ 展示词 + .status 类名（颜色语义）。
+// 关键修正：await_review 用 review(琥珀) 与 rendering 的 progress(蓝) 区分。
+export const SCENE_STATUS: Record<string, { label: string; cls: string }> = {
+  pending: { label: "待生成", cls: "pending" },
+  rendering: { label: "渲染中", cls: "progress" },
+  await_review: { label: "待确认", cls: "review" },
+  approved: { label: "已通过", cls: "ok" },
+  redo: { label: "待重做", cls: "err" },
+};
+
+/* ---------- 格式化 ---------- */
+export function fmtBytes(n: number): string {
+  if (!n || n < 0) return "0 B";
+  const u = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  let v = n;
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toFixed(v >= 100 || i === 0 ? 0 : 1)} ${u[i]}`;
+}
+
+export function fmtRelTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const hhmm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  if (sameDay) return `今天 ${hhmm}`;
+  const y = new Date(now);
+  y.setDate(now.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return `昨天 ${hhmm}`;
+  const days = Math.floor((now.getTime() - d.getTime()) / 86400000);
+  if (days < 30) return `${days} 天前`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /* ---------- 进度阶段文案（兜底；优先用 SSE message） ---------- */
