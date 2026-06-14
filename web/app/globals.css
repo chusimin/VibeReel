@@ -95,6 +95,9 @@ label.fld{display:block;font-size:13px;color:var(--text-2);margin:0 0 6px 2px}
 .sidebar .navitem:hover{color:var(--text-2);background:var(--surface-2)}
 .sidebar .navitem.on{color:var(--text);background:var(--surface-2)}
 .sidebar .navitem.on svg{stroke:#fff}
+.sidebar.steps{width:212px;flex:0 0 212px;align-items:stretch;padding:18px 14px}
+.sidebar.steps .logo{margin-left:6px}
+.sidebar.steps .me{margin-left:6px}
 .sidebar .grow{flex:1}
 .sidebar .me{width:38px;height:38px;border-radius:var(--r-pill);background:var(--surface-3);display:grid;place-items:center;color:var(--text);font-size:13px;font-weight:600;cursor:pointer}
 

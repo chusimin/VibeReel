@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import TopBar from "@/components/TopBar";
-import Rail from "@/components/Rail";
+import { EnginePill } from "@/components/AppShell";
+import Status from "@/components/Status";
 import {
   api,
   toast,
@@ -14,7 +14,39 @@ import {
   TYPES,
   PROG_TXT,
   railFor,
+  railIndex,
+  projectStatus,
+  SCENE_STATUS,
 } from "@/app/_ui";
+import type { VideoType, Stage } from "@/lib/types";
+
+// 左侧竖向步骤栏（mockups 03-06）：内容准备 + 各闸门。
+const RAIL_LABEL: Record<string, string> = {
+  方向: "方向确认",
+  讲稿: "讲稿确认",
+  分镜: "分镜确认",
+  分段: "分段预览",
+  终检: "最终检查",
+};
+function WorkRail({ stage, videoType }: { stage: Stage; videoType: VideoType }) {
+  const gates = railFor(videoType);
+  const steps = ["内容准备", ...gates.map((g) => RAIL_LABEL[g.l] ?? g.l)];
+  const prep = ["ingesting", "decomposing", "briefing"].includes(stage);
+  const cur = prep ? 0 : railIndex(stage, videoType) + 1;
+  return (
+    <div className="vrail">
+      {steps.map((label, idx) => {
+        const cls = idx < cur ? "done" : idx === cur ? "cur" : "";
+        return (
+          <div key={label} className={`step ${cls}`}>
+            <span className="num">{idx < cur ? "✓" : idx + 1}</span>
+            {label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 import type {
   ProjectMeta,
   SceneMeta,
@@ -104,7 +136,7 @@ function MaterialPanel({ material }: { material: Material }) {
             <div
               key={ch.id}
               className="card pad"
-              style={{ background: "#fff", padding: "10px 12px" }}
+              style={{ background: "var(--surface-1)", padding: "10px 12px" }}
             >
               <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
                 <span className="chip" style={{ fontSize: 11.5 }}>
@@ -212,17 +244,12 @@ export default function ProjectPage() {
 
   if (!project) {
     return (
-      <div className="shell">
-        <TopBar active="home" />
-        <div className="page wide">
-          <div className="card pad">
-            <div className="row" style={{ gap: 11 }}>
-              <span className="spin"></span>
-              <b>{connErr ? "连接中断，正在重连…" : "连接项目状态流…"}</b>
-              <span className="chip" style={{ marginLeft: "auto" }}>
-                SSE 实时
-              </span>
-            </div>
+      <div className="center">
+        <div className="card pad">
+          <div className="row" style={{ gap: 11 }}>
+            <span className="spin"></span>
+            <b>{connErr ? "连接中断，正在重连…" : "连接项目状态流…"}</b>
+            <span className="chip" style={{ marginLeft: "auto" }}>SSE 实时</span>
           </div>
         </div>
       </div>
@@ -231,46 +258,39 @@ export default function ProjectPage() {
 
   const p = project;
   const t = TYPES[p.videoType];
+  const ps = projectStatus(p.stage);
 
   return (
-    <div className="shell">
-      <TopBar active="home" />
-      <div className="page wide">
-        <div className="fade">
-          <div className="spaced">
-            <div>
-              <h1 style={{ fontSize: 24 }}>{p.title}</h1>
-            </div>
-            <a onClick={() => router.push("/")}>← 项目列表</a>
-          </div>
+    <div className="app">
+      {/* 左侧竖向步骤栏（mockups 03-06） */}
+      <aside className="sidebar steps">
+        <div className="logo" onClick={() => router.push("/")} title="VibeReel">V</div>
+        <WorkRail stage={p.stage} videoType={p.videoType} />
+        <div className="grow" />
+        <div className="me" onClick={() => router.push("/settings")} title="账户">我</div>
+      </aside>
 
+      <div className="main">
+        {/* 顶栏：返回 + 项目名 + 状态 + 画幅 + 引擎 */}
+        <div className="topbar">
+          <span className="back" onClick={() => router.push("/")}>← 项目列表</span>
+          <div className="sp" />
+          <b style={{ fontSize: 14 }}>{p.title}</b>
+          <Status cls={ps.cls} label={ps.label} />
+          <span className="chip">{p.aspect}</span>
+          <EnginePill />
+        </div>
+
+        <div className="content wide fade">
           {/* 四件套 chips */}
-          <div
-            className="row"
-            style={{ flexWrap: "wrap", gap: 8, margin: "14px 0 22px" }}
-          >
-            <span className="chip">
-              类型 <b>{t.name}</b>
-            </span>
-            <span className="chip">
-              画幅 <b>{p.aspect}</b>
-            </span>
-            <span className="chip">
-              风格 <b>{p.fourPack.styleId}</b>
-            </span>
-            <span className="chip">
-              骨架 <b>{railFor(p.videoType).length} 闸门</b>
-            </span>
-            <span className="chip">
-              配音 <b>{p.vo ? "开" : "关"}</b>
-            </span>
+          <div className="row" style={{ flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+            <span className="chip">类型 <b>{t.name}</b></span>
+            <span className="chip">风格 <b>{p.fourPack.styleId}</b></span>
+            <span className="chip">骨架 <b>{railFor(p.videoType).length} 闸门</b></span>
+            <span className="chip">配音 <b>{p.vo ? "开" : "关"}</b></span>
           </div>
 
-          {/* 公共骨架 rail */}
-          <Rail stage={p.stage} videoType={p.videoType} />
-          <div className="divider"></div>
-
-          {/* 内容拆解料块（#5）：material 存在且有 chunks 才展示 */}
+          {/* 内容拆解料块（#5） */}
           {p.material && p.material.chunks.length > 0 ? (
             <MaterialPanel material={p.material} />
           ) : null}
@@ -416,8 +436,8 @@ function GateConcept({
     <div className="fade">
       {/* concept 在最前，回退无意义 → 不显示返回按钮 */}
       <div className="spaced">
-        <h2>闸门① · 选方向</h2>
-        <span className="aux">2–3 个概念方向，挑一个（可逐项编辑）</span>
+        <h2>方向确认</h2>
+        <span className="aux">2–3 个创作方向，挑一个（可逐项编辑）</span>
       </div>
       <div
         className="grid"
@@ -620,13 +640,13 @@ function GateScript({
     <div className="fade">
       <BackBar nav={nav} />
       <div className="spaced">
-        <h2>闸门 · 确认讲稿</h2>
+        <h2>讲稿确认</h2>
         <span className="aux">逐镜旁白 / 知识点，确认后再排分镜</span>
       </div>
       <div className="banner info" style={{ margin: "14px 0" }}>
         讲稿由本机 claude CLI 口语化生成，确认后才会进入分镜与渲染。
       </div>
-      <div className="card pad" style={{ background: "#fff" }}>
+      <div className="card pad" style={{ background: "var(--surface-1)" }}>
         {lines.length ? (
           lines.map((s) => (
             <div key={s.index} style={{ marginBottom: 14 }}>
@@ -652,7 +672,7 @@ function GateScript({
       </div>
 
       {redo !== null ? (
-        <div className="card pad fade" style={{ marginTop: 18, background: "#fff" }}>
+        <div className="card pad fade" style={{ marginTop: 18, background: "var(--surface-1)" }}>
           <label className="fld">
             一句话意见（可空）— agent 会按意见重写讲稿
           </label>
@@ -713,7 +733,7 @@ function GateStoryboard({
     <div className="fade">
       <BackBar nav={nav} />
       <div className="spaced">
-        <h2>闸门② · 确认分镜</h2>
+        <h2>分镜确认</h2>
         <span className="aux">每行一镜 · 列项可内联编辑</span>
       </div>
       <div className="banner info" style={{ margin: "14px 0" }}>
@@ -752,7 +772,7 @@ function GateStoryboard({
       </div>
 
       {redo !== null ? (
-        <div className="card pad fade" style={{ marginTop: 18, background: "#fff" }}>
+        <div className="card pad fade" style={{ marginTop: 18, background: "var(--surface-1)" }}>
           <label className="fld">
             一句话意见（可空）— agent 会按意见重写分镜并追加一条 revision
           </label>
@@ -819,7 +839,7 @@ function StoryboardRow({
   return (
     <div
       className="card pad fade"
-      style={{ background: "#fff", padding: "12px 14px" }}
+      style={{ background: "var(--surface-1)", padding: "12px 14px" }}
     >
       <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
         {/* 草稿缩略图（带角标） */}
@@ -964,7 +984,7 @@ function GateChunks({
     <div className="fade">
       <BackBar nav={nav} />
       <div className="spaced">
-        <h2>闸门③ · 渲染（多后端流式）</h2>
+        <h2>分段预览</h2>
         <div className="row" style={{ gap: 8 }}>
           {/* 视图模式切换 */}
           <span
@@ -1086,7 +1106,7 @@ function ChunkMedia({
   }
   // pending：待生成占位（#9 文案）。
   return (
-    <div className="skel" style={{ aspectRatio: ar, background: "#F2F3F5" }}>
+    <div className="skel" style={{ aspectRatio: ar, background: "var(--surface-2)" }}>
       <span className="lbl muted">待生成 · {b.name}</span>
     </div>
   );
@@ -1160,8 +1180,17 @@ function ChunkCard({
   gate: (b: GateBody) => void;
 }) {
   const ar = ratio(aspect);
+  const ss = SCENE_STATUS[s.status] ?? SCENE_STATUS.pending;
   return (
-    <div className="card pad fade" style={{ background: "#fff" }}>
+    <div className="card pad fade">
+      <div className="spaced" style={{ marginBottom: 10 }}>
+        <b style={{ fontSize: 13.5 }}>#{s.index} {s.role}</b>
+        <Status
+          cls={ss.cls}
+          label={ss.label}
+          ring={s.status === "rendering"}
+        />
+      </div>
       <div style={{ maxWidth: aspect === "9:16" ? 300 : "100%" }}>
         <ChunkMedia scene={s} projectId={projectId} ar={ar} />
       </div>
@@ -1194,7 +1223,7 @@ function FullScreenChunks({
   const narrow = aspect === "9:16";
 
   return (
-    <div className="card pad fade" style={{ background: "#fff" }}>
+    <div className="card pad fade" style={{ background: "var(--surface-1)" }}>
       <div className="row" style={{ gap: 14, alignItems: "center" }}>
         {/* ◀ 翻页 */}
         <button
@@ -1294,7 +1323,7 @@ function GateFinal({
       {/* final 在最后，可回退到上一个闸门 */}
       <BackBar nav={nav} />
       <div className="spaced">
-        <h2>闸门④ · 终检与下载</h2>
+        <h2>最终检查</h2>
         <span className="aux">{p.aspect} 成片</span>
       </div>
 
