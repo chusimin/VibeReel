@@ -1,0 +1,20 @@
+# deps / build
+node_modules/
+.next/
+*.tsbuildinfo
+out/
+dist/
+
+# env & secrets
+.env
+.env.local
+.env.*.local
+
+# runtime project data (regenerable, large media)
+web/data/projects/
+web/data/library/files/
+
+# os / tooling
+.DS_Store
+.gstack/
+*.log

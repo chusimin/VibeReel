@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VibeReel · 高保真点击原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --panel:#F6F7F9; --border:#E6E8EB;
+  --text:#0B0B0F; --text2:#6B7280;
+  --accent:#FF5A1F; --accent-h:#E64A12;
+  --ok:#16A34A; --err:#DC2626; --warn:#D97706;
+  --rc:16px; --rb:10px; --rp:999px;
+  --shc:0 1px 3px rgba(0,0,0,.06);
+  --shp:0 8px 24px rgba(0,0,0,.12);
+  --maxw:960px; --maxwm:1120px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Inter",system-ui,"PingFang SC",sans-serif;
+  background:var(--bg); color:var(--text);
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+h1{font-size:32px;font-weight:600;letter-spacing:-.01em}
+h2{font-size:20px;font-weight:600}
+.aux{font-size:13px;color:var(--text2)}
+.muted{color:var(--text2)}
+a{color:var(--accent);text-decoration:none}
+
+/* ---------- controls ---------- */
+.btn{
+  font:inherit;font-weight:500;font-size:15px;
+  background:var(--accent);color:#fff;border:none;border-radius:var(--rb);
+  padding:10px 18px;cursor:pointer;transition:background .15s, transform .05s;
+}
+.btn:hover{background:var(--accent-h)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{background:#FBCBB6;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn.ghost:hover{background:var(--panel)}
+.btn.sm{padding:7px 13px;font-size:13.5px}
+.btn.ok{background:var(--ok)} .btn.ok:hover{filter:brightness(.94)}
+.btn.danger{background:#fff;color:var(--err);border:1px solid #F3C9C9}
+.btn.danger:hover{background:#FDF2F2}
+.input,textarea,select{
+  font:inherit;font-size:15px;width:100%;background:#fff;color:var(--text);
+  border:1px solid var(--border);border-radius:var(--rb);padding:11px 13px;outline:none;
+}
+.input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,90,31,.12)}
+textarea{resize:vertical;min-height:80px}
+label.fld{display:block;font-size:13px;color:var(--text2);margin:0 0 6px 2px}
+
+/* ---------- layout ---------- */
+.shell{min-height:100%;display:flex;flex-direction:column}
+.topbar{
+  height:56px;border-bottom:1px solid var(--border);background:#fff;
+  display:flex;align-items:center;gap:18px;padding:0 22px;position:sticky;top:0;z-index:30;
+}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:16px;cursor:pointer}
+.brand .dot{width:18px;height:18px;border-radius:6px;background:var(--accent);
+  box-shadow:0 0 0 4px rgba(255,90,31,.14)}
+.topbar .nav{display:flex;gap:4px;margin-left:6px}
+.topbar .nav a{padding:7px 12px;border-radius:var(--rb);color:var(--text2);font-size:14px;cursor:pointer}
+.topbar .nav a:hover{background:var(--panel);color:var(--text)}
+.topbar .nav a.on{color:var(--text);background:var(--panel)}
+.topbar .sp{flex:1}
+.page{flex:1;width:100%;max-width:var(--maxw);margin:0 auto;padding:34px 22px 80px}
+.page.wide{max-width:var(--maxwm)}
+.center{min-height:100%;display:grid;place-items:center;padding:24px}
+
+/* ---------- cards ---------- */
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--rc);box-shadow:var(--shc)}
+.card.pad{padding:22px}
+.row{display:flex;gap:12px;align-items:center}
+.col{display:flex;flex-direction:column}
+.grid{display:grid;gap:16px}
+.spaced{display:flex;justify-content:space-between;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text2);
+  background:#fff;border:1px solid var(--border);border-radius:var(--rp);padding:4px 11px}
+.chip b{color:var(--text);font-weight:600}
+.pill{font-size:14px;border:1px solid var(--border);background:#fff;border-radius:var(--rp);
+  padding:8px 16px;cursor:pointer;transition:.12s;color:var(--text2)}
+.pill.on{border-color:var(--accent);color:var(--accent);background:rgba(255,90,31,.06);font-weight:500}
+.tag{font-size:11.5px;font-weight:600;letter-spacing:.02em;border-radius:var(--rp);padding:3px 9px}
+.divider{height:1px;background:var(--border);margin:22px 0}
+
+/* banners */
+.banner{border-radius:var(--rb);padding:11px 15px;font-size:13.5px;display:flex;gap:10px;align-items:center}
+.banner.warn{background:#FFF7ED;border:1px solid #FDE3C7;color:#9A5B12}
+.banner.err{background:#FDF2F2;border:1px solid #F3C9C9;color:#B42121}
+.banner.info{background:#F1F6FF;border:1px solid #D6E4FB;color:#2156B4}
+
+/* renderer badge tints */
+.bk-remotion{background:#EAF1FE;color:#2156B4}
+.bk-generative{background:#F3ECFE;color:#7B3FCB}
+.bk-lottie{background:#E7F7F2;color:#0E8C6E}
+.bk-kenburns{background:#FCF1E0;color:#A4690F}
+
+/* ---------- stepper (公共骨架) ---------- */
+.rail{display:flex;align-items:center;gap:0;margin:6px 0 4px}
+.rail .step{display:flex;align-items:center;gap:9px;color:var(--text2);font-size:13.5px}
+.rail .num{width:24px;height:24px;border-radius:var(--rp);display:grid;place-items:center;
+  font-size:12.5px;font-weight:600;background:#fff;border:1.5px solid var(--border);color:var(--text2)}
+.rail .step.cur .num{background:var(--accent);border-color:var(--accent);color:#fff}
+.rail .step.cur{color:var(--text);font-weight:600}
+.rail .step.done .num{background:#fff;border-color:var(--ok);color:var(--ok)}
+.rail .step.done{color:var(--text)}
+.rail .bar{flex:1;height:1.5px;background:var(--border);margin:0 12px;min-width:18px}
+.rail .bar.done{background:var(--ok)}
+
+/* ---------- media placeholders ---------- */
+.aspect{position:relative;width:100%;border-radius:12px;overflow:hidden;background:#0B0B0F}
+.draft-img{position:relative;border-radius:12px;overflow:hidden;display:grid;place-items:center;
+  color:#fff;text-align:center;font-size:13px}
+.corner{position:absolute;top:8px;left:8px;background:rgba(11,11,15,.55);backdrop-filter:blur(4px);
+  color:#fff;font-size:11px;padding:3px 8px;border-radius:var(--rp)}
+.player{position:relative;background:#0B0B0F;border-radius:12px;overflow:hidden;display:grid;place-items:center}
+.player .play{width:54px;height:54px;border-radius:var(--rp);background:rgba(255,255,255,.14);
+  display:grid;place-items:center;backdrop-filter:blur(6px)}
+.player .play::after{content:"";border-style:solid;border-width:9px 0 9px 15px;
+  border-color:transparent transparent transparent #fff;margin-left:4px}
+.player .meta{position:absolute;left:0;right:0;bottom:0;padding:9px 12px;
+  background:linear-gradient(transparent,rgba(0,0,0,.55));color:#fff;font-size:12px;
+  display:flex;justify-content:space-between;align-items:center}
+.skel{position:relative;border-radius:12px;overflow:hidden;background:#EDEFF2;display:grid;place-items:center;text-align:center}
+.skel::before{content:"";position:absolute;inset:0;
+  background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.75) 50%,transparent 80%);
+  background-size:200% 100%;animation:sh 1.25s infinite}
+@keyframes sh{0%{background-position:180% 0}100%{background-position:-80% 0}}
+.skel .lbl{position:relative;z-index:1;color:#6B7280;font-size:13px;font-weight:500}
+.spin{width:16px;height:16px;border:2.5px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* selectable big cards */
+.sel{background:#fff;border:1.5px solid var(--border);border-radius:var(--rc);padding:18px;cursor:pointer;transition:.12s}
+.sel:hover{border-color:#cfd3d8}
+.sel.on{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,90,31,.12)}
+.thumb{height:96px;border-radius:10px;margin-bottom:14px}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:80;
+  background:#0B0B0F;color:#fff;padding:11px 18px;border-radius:var(--rb);font-size:14px;
+  box-shadow:var(--shp);opacity:0;pointer-events:none;transition:.25s}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+/* progress bar */
+.prog{height:6px;background:var(--border);border-radius:var(--rp);overflow:hidden}
+.prog>i{display:block;height:100%;background:var(--accent);width:0;transition:width .9s ease}
+
+.hint{font-size:12.5px;color:var(--text2);background:#fff;border:1px dashed var(--border);
+  border-radius:var(--rb);padding:9px 13px}
+.fade{animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   VibeReel 点击原型 —— 单文件状态机
+   数据全为模拟；计时器模拟"生成/渲染"，闸门处停下等用户决策。
+   ============================================================ */
+
+const RB = {
+  remotion:  {cls:'bk-remotion',  name:'信息镜 · Remotion'},
+  generative:{cls:'bk-generative',name:'氛围镜 · 生成式'},
+  lottie:    {cls:'bk-lottie',    name:'动态图标 · Lottie'},
+  'still-kenburns':{cls:'bk-kenburns',name:'素材推拉 · KenBurns'},
+};
+const TYPES = {
+  showreel:{name:'产品 showreel', desc:'把产品/网站做成有情绪曲线的高级短片', vo:false,
+            note:'4 闸门 · 默认不配音', grad:'linear-gradient(135deg,#FF5A1F,#FF9A5A)'},
+  teaching:{name:'教学小视频', desc:'一步步把"怎么做"讲清楚', vo:true,
+            note:'4 闸门 · 默认配音', grad:'linear-gradient(135deg,#2156B4,#5AA0FF)'},
+  popsci:  {name:'知识科普', desc:'把一个概念讲懂、讲出高级感', vo:true,
+            note:'5 闸门（含讲稿确认）· 默认配音', grad:'linear-gradient(135deg,#0E8C6E,#46C9A4)'},
+};
+// showreel 候选风格
+const STYLES = [
+  {id:'editorial-saas', name:'克制编辑感 SaaS', tone:'大留白 · 单一火花色', grad:'linear-gradient(135deg,#F6F7F9,#E9ECF1)'},
+  {id:'apple-keynote-light', name:'明亮 Keynote', tone:'高 key · 大字号 · 柔和阴影', grad:'linear-gradient(135deg,#FFFFFF,#EDEFF3)'},
+];
+
+function baseScenes(){
+  return [
+    {i:1, role:'Hook · 痛点', dur:3, text:'“每天 3 小时，耗在对不齐的数据上。”', renderer:'remotion',        status:'pending', rev:0},
+    {i:2, role:'氛围 b-roll',  dur:4, text:'清晨办公室空镜，光线缓缓掠过桌面',     renderer:'generative',      status:'pending', rev:0},
+    {i:3, role:'功能演示',     dur:5, text:'仪表盘 UI · 缓慢推拉聚焦关键指标',       renderer:'still-kenburns', status:'pending', rev:0},
+    {i:4, role:'数据增长',     dur:4, text:'MRR 增长曲线 +180%',                     renderer:'remotion',        status:'pending', rev:0},
+    {i:5, role:'Payoff / CTA', dur:3, text:'Acme · 让数据自己说话',                  renderer:'lottie',          status:'pending', rev:0},
+  ];
+}
+const CONCEPTS = [
+  {title:'克制编辑感',  tone:'大留白 · 单一火花色 · 数据即主角', words:['高 key 白底','克制动效','linear.app 质感']},
+  {title:'夜间数据流',  tone:'深色氛围 · 霓虹强调 · 速度感',     words:['深空','流光','快切节奏']},
+  {title:'明亮叙事',    tone:'温暖光感 · 人物在场 · 故事线',     words:['暖色','真实场景','旁白引导']},
+];
+
+/* ---------- 全局状态 ---------- */
+const S = {
+  screen:'login',
+  cliReady:true,   // POC：后端 spawn 本机 claude CLI（零 key）；v1 生产改回 BYO Anthropic key
+  model:'claude-sonnet-4-6',
+  projects:[
+    {id:'p1', title:'Acme Analytics 产品 showreel', type:'showreel', aspect:'16:9', stage:'done'},
+    {id:'p2', title:'Pebble 笔记 App 介绍',         type:'showreel', aspect:'9:16', stage:'storyboard'},
+    {id:'p3', title:'什么是向量数据库',              type:'popsci',   aspect:'16:9', stage:'rendering'},
+  ],
+  draft:null,   // 新建向导临时
+  project:null, // 当前打开的项目
+};
+
+/* ---------- 工具 ---------- */
+const $ = sel => document.querySelector(sel);
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
+function ratio(a){return a==='9:16'?'9/16':a==='1:1'?'1/1':'16/9';}
+function go(s){S.screen=s;render();window.scrollTo(0,0);}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+/* ============================================================
+   登录
+   ============================================================ */
+function vLogin(){
+  return `<div class="center"><div class="card pad fade" style="width:380px;text-align:center">
+    <div class="brand" style="justify-content:center;font-size:20px;margin-bottom:6px"><span class="dot"></span>VibeReel</div>
+    <p class="aux" style="margin-bottom:22px">给小白把内容一键做成视频 · 共享密码进入</p>
+    <label class="fld" style="text-align:left">访问密码</label>
+    <input class="input" id="pw" type="password" placeholder="输入共享密码" value="demo" />
+    <button class="btn" style="width:100%;margin-top:16px" onclick="login()">进入</button>
+    <p class="aux" style="margin-top:14px">原型演示 · 任意密码可进</p>
+  </div></div>`;
+}
+function login(){S.screen='home';render();}
+
+/* ============================================================
+   顶栏 + 壳
+   ============================================================ */
+function shell(active, body, wide){
+  return `<div class="shell">
+    <div class="topbar">
+      <div class="brand" onclick="go('home')"><span class="dot"></span>VibeReel</div>
+      <div class="nav">
+        <a class="${active==='home'?'on':''}" onclick="go('home')">项目</a>
+        <a class="${active==='settings'?'on':''}" onclick="go('settings')">设置</a>
+      </div>
+      <div class="sp"></div>
+      <span class="chip" title="POC：后端 spawn 本机 claude CLI，零 key">⚙️ POC · 本地 claude CLI</span>
+      <button class="btn ghost sm" onclick="resetProto()">重置原型</button>
+    </div>
+    <div class="page ${wide?'wide':''}">${body}</div>
+  </div>`;
+}
+function resetProto(){S.screen='login';S.hasKey=false;S.project=null;S.draft=null;
+  S.projects=S.projects.filter(p=>['p1','p2','p3'].includes(p.id));render();}
+
+/* ============================================================
+   设置（BYO key）
+   ============================================================ */
+function vSettings(){
+  return shell('settings', `<div class="fade" style="max-width:580px">
+    <h1>设置</h1>
+    <p class="muted" style="margin:6px 0 24px">POC 阶段：创意步直接调用<b>本机 claude 命令行</b>，复用你已登录的 Claude Code，<b>零 API key</b>。</p>
+    <div class="card pad">
+      <div class="spaced"><label class="fld" style="margin:0">运行方式（POC）</label><span class="chip" style="color:var(--ok)">● 本地 claude CLI 已检测</span></div>
+      <div class="mono aux" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:11px 13px;margin-top:10px;overflow-x:auto;white-space:nowrap">claude -p "…" --output-format json --model &lt;档&gt; --append-system-prompt "&lt;四件套知识包&gt;"</div>
+      <label class="fld" style="margin-top:18px">模型档（映射 claude --model）</label>
+      <select class="input" id="model">
+        <option value="claude-haiku-4-5"  ${S.model==='claude-haiku-4-5'?'selected':''}>Haiku · 快而省</option>
+        <option value="claude-sonnet-4-6" ${S.model==='claude-sonnet-4-6'?'selected':''}>Sonnet 4.6 · 默认</option>
+        <option value="claude-opus-4-8"   ${S.model==='claude-opus-4-8'?'selected':''}>Opus · 最强</option>
+      </select>
+      <div class="banner info" style="margin-top:18px">平台 key（OpenAI 草稿 / 生成式视频）仍预置在服务端，无需你填。</div>
+      <div class="hint" style="margin-top:12px">v1 生产将增加 <b>BYO Anthropic key</b>（粘贴到设置 · 仅存浏览器 · 请求透传 · 不落盘）。POC 先用本机 CLI 跑通。</div>
+      <div class="row" style="margin-top:20px">
+        <button class="btn" onclick="saveSettings()">保存</button>
+        <button class="btn ghost" onclick="go('home')">返回</button>
+      </div>
+    </div>
+  </div>`);
+}
+function saveSettings(){S.model=$('#model').value;toast('已保存模型档（POC 用本机 claude）');go('home');}
+
+/* ============================================================
+   项目列表（首页）
+   ============================================================ */
+function stageLabel(st){return {done:'已完成',storyboard:'待确认分镜',rendering:'分段渲染中',concept:'待选方向'}[st]||st;}
+function vHome(){
+  const cards = S.projects.map(p=>{
+    const t=TYPES[p.type];
+    return `<div class="card pad" style="cursor:pointer" onclick="openProject('${p.id}')">
+      <div class="spaced">
+        <span class="tag" style="background:${t.grad};color:#fff">${t.name}</span>
+        <span class="aux">${p.aspect}</span>
+      </div>
+      <h2 style="margin:14px 0 6px;font-size:17px">${esc(p.title)}</h2>
+      <div class="spaced">
+        <span class="chip">${p.stage==='done'?'✅':'⏳'} ${stageLabel(p.stage)}</span>
+        <span class="aux">${p.stage==='done'?'下载 / 重开':'继续 →'}</span>
+      </div>
+    </div>`;
+  }).join('');
+  return shell('home', `<div class="fade">
+    <div class="banner info" style="margin-bottom:20px">POC 模式：创意步调用本机 <b>claude</b> 命令行（零 key，复用本地登录态）· <a onclick="go('settings')">查看设置 →</a></div>
+    <div class="spaced" style="margin-bottom:22px">
+      <div><h1>我的项目</h1><p class="muted" style="margin-top:4px">一套骨架装三类视频 · 共 ${S.projects.length} 个</p></div>
+      <button class="btn" onclick="startNew()">+ 新建项目</button>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">${cards}</div>
+  </div>`);
+}
+function startNew(){
+  S.draft={step:1, type:'showreel', inputKind:'url', input:'https://acme.example.com', aspect:'16:9', style:'editorial-saas', assets:[]};
+  go('new');
+}
+
+/* ============================================================
+   新建向导（5 步）
+   ============================================================ */
+function wizSteps(){return ['选类型','填输入','选画幅','选风格','传素材'];}
+function vNew(){
+  const d=S.draft, step=d.step;
+  const dots = wizSteps().map((s,idx)=>{
+    const n=idx+1, st=n<step?'done':n===step?'cur':'';
+    return `<div class="step ${st}"><span class="num">${n<step?'✓':n}</span>${s}</div>`+
+      (idx<4?`<span class="bar ${n<step?'done':''}"></span>`:'');
+  }).join('');
+  let body='';
+  if(step===1){
+    body = `<div class="grid" style="grid-template-columns:repeat(3,1fr)">`+
+      Object.entries(TYPES).map(([k,t])=>`<div class="sel ${d.type===k?'on':''}" onclick="setType('${k}')">
+        <div class="thumb" style="background:${t.grad}"></div>
+        <h2 style="font-size:16px">${t.name}</h2>
+        <p class="aux" style="margin:6px 0 10px">${t.desc}</p>
+        <span class="chip">${t.note}</span>
+      </div>`).join('')+`</div>
+      <div class="hint" style="margin-top:16px">📌 选类型 = 装上该类型的<b>四件套</b>（知识包 / 风格包 / 闸门配置 / QA 规则），再走同一条公共骨架。本原型把 <b>showreel</b> 走到底；教学 / 科普为入口示意。</div>`;
+  }
+  if(step===2){
+    body = `<div class="card pad" style="max-width:620px">
+      <div class="row" style="margin-bottom:16px">
+        <span class="pill ${d.inputKind==='url'?'on':''}" onclick="setKind('url')">粘链接 URL</span>
+        <span class="pill ${d.inputKind==='idea'?'on':''}" onclick="setKind('idea')">写一句想法</span>
+      </div>
+      ${d.inputKind==='url'
+        ? `<label class="fld">产品 / 文章 / 视频链接</label><input class="input" id="inp" value="${esc(d.input)}" placeholder="https://...">`
+        : `<label class="fld">一句话想法</label><textarea id="inp" placeholder="例：把我们的数据分析工具做成 15s 高级感 showreel">${esc(d.inputKind==='idea'?d.input:'')}</textarea>`}
+      <div class="banner info" style="margin-top:16px">URL 会自动抓取内容；抓不动时可改成"纯文字想法"重试。</div>
+    </div>`;
+  }
+  if(step===3){
+    body = `<div class="row" style="gap:10px;margin-bottom:22px">
+      ${['16:9','9:16','1:1'].map(a=>`<span class="pill ${d.aspect===a?'on':''}" onclick="setAspect('${a}')">${a}${a==='16:9'?' · 默认':''}</span>`).join('')}
+    </div>
+    <div class="muted aux" style="margin-bottom:8px">实时预览框</div>
+    <div style="${d.aspect==='9:16'?'max-width:240px':'max-width:460px'}">
+      <div class="aspect" style="aspect-ratio:${ratio(d.aspect)};display:grid;place-items:center">
+        <span style="color:#fff;opacity:.6;font-size:13px">${d.aspect} 预览</span>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:16px">⚠️ 9:16 会显式告诉引擎 <span class="mono">--platform douyin</span>，不会因默认出成 16:9。</div>`;
+  }
+  if(step===4){
+    body = `<div class="grid" style="grid-template-columns:repeat(2,1fr);max-width:620px">`+
+      STYLES.map(s=>`<div class="sel ${d.style===s.id?'on':''}" onclick="setStyle('${s.id}')">
+        <div class="thumb" style="background:${s.grad};border:1px solid var(--border)"></div>
+        <h2 style="font-size:15px">${s.name}</h2>
+        <p class="aux" style="margin-top:5px">${s.tone}</p>
+        <code class="aux mono">${s.id}</code>
+      </div>`).join('')+`</div>
+      <div class="hint" style="margin-top:16px">风格包同时决定<b>网页里</b>的草稿基因词与<b>每个后端</b>渲染时吃的统一 config（色板/字体）。</div>`;
+  }
+  if(step===5){
+    const grid = d.assets.length
+      ? `<div class="grid" style="grid-template-columns:repeat(4,1fr);margin-top:14px">`+
+        d.assets.map((a,idx)=>`<div class="col" style="gap:6px">
+          <div class="thumb" style="height:72px;margin:0;background:${a.grad};position:relative">
+            <span class="corner" onclick="rmAsset(${idx})" style="cursor:pointer;top:6px;right:6px;left:auto">✕</span>
+          </div>
+          <span class="aux" style="text-align:center">${a.name}</span></div>`).join('')+`</div>`
+      : '';
+    body = `<div class="card pad" style="border-style:dashed;text-align:center;cursor:pointer;max-width:620px" onclick="addAsset()">
+        <div style="font-size:26px">⬆️</div>
+        <p style="font-weight:500;margin:8px 0 4px">点击模拟上传：产品截图 / logo / 品牌色 / 字体 / 片段</p>
+        <p class="aux">可选，但传得越全成片越准（尤其素材推拉镜要用到截图）</p>
+      </div>${grid}`;
+  }
+  const last=step===5;
+  return shell('home', `<div class="fade">
+    <div class="spaced" style="margin-bottom:6px"><h1>新建项目</h1><a onclick="go('home')">取消</a></div>
+    <div class="rail" style="margin:18px 0 26px">${dots}</div>
+    ${body}
+    <div class="row" style="margin-top:28px">
+      ${step>1?`<button class="btn ghost" onclick="wizBack()">上一步</button>`:''}
+      <div class="sp" style="flex:1"></div>
+      ${step===5?`<button class="btn ghost" onclick="finishWizard()">跳过素材</button>`:''}
+      <button class="btn" onclick="${last?'finishWizard()':'wizNext()'}">${last?'开始生成 →':'下一步'}</button>
+    </div>
+  </div>`);
+}
+function setType(k){S.draft.type=k;render();}
+function setKind(k){if(k!=='url')S.draft.input='';S.draft.inputKind=k;render();}
+function setAspect(a){S.draft.aspect=a;render();}
+function setStyle(s){S.draft.style=s;render();}
+function addAsset(){const names=['dashboard.png','logo.svg','brand.png','hero-clip.mp4'];
+  const grads=['linear-gradient(135deg,#2156B4,#5AA0FF)','linear-gradient(135deg,#FF5A1F,#FFB07A)','linear-gradient(135deg,#0E8C6E,#46C9A4)','linear-gradient(135deg,#7B3FCB,#B98BF0)'];
+  const n=S.draft.assets.length%4;S.draft.assets.push({name:names[n],grad:grads[n]});render();}
+function rmAsset(i){S.draft.assets.splice(i,1);render();}
+function wizNext(){const d=S.draft;if((d.step===2)&&$('#inp'))d.input=$('#inp').value;d.step++;render();window.scrollTo(0,0);}
+function wizBack(){if(S.draft.step===2&&$('#inp'))S.draft.input=$('#inp').value;S.draft.step--;render();window.scrollTo(0,0);}
+function finishWizard(){
+  const d=S.draft;if($('#inp'))d.input=$('#inp').value;
+  const id='new'+Date.now();
+  S.project={id, title: d.type==='showreel'?'Acme Analytics 产品 showreel':TYPES[d.type].name+' 项目',
+    type:d.type, aspect:d.aspect, style:d.style, assets:d.assets.slice(),
+    vo:TYPES[d.type].vo, stage:'ingesting', scenes:baseScenes(), concept:null, redo:null};
+  S.screen='project';render();runProgress('ingesting');
+}
+
+/* ============================================================
+   项目页（公共骨架四闸门）
+   ============================================================ */
+function openProject(id){
+  const meta=S.projects.find(p=>p.id===id);
+  S.project={id:meta.id,title:meta.title,type:meta.type,aspect:meta.aspect,style:'editorial-saas',
+    assets:[],vo:TYPES[meta.type].vo,stage:meta.stage==='done'?'final':meta.stage,
+    scenes:seedScenes(meta.stage),concept:meta.stage==='concept'?null:0,redo:null};
+  if(meta.stage==='done')S.project.stage='final';
+  S.screen='project';render();
+}
+function seedScenes(stage){
+  const sc=baseScenes();
+  if(stage==='rendering'){sc[0].status='approved';sc[1].status='approved';sc[2].status='await_review';}
+  if(stage==='done'){sc.forEach(s=>s.status='approved');}
+  return sc;
+}
+
+/* 阶段 → 骨架闸门索引 */
+function railFor(type){
+  const base=[{k:'concept',l:'方向'},{k:'storyboard',l:'分镜'},{k:'chunk',l:'分段'},{k:'final',l:'终检'}];
+  if(type==='popsci'||type==='teaching'){base.splice(1,0,{k:'script',l:'讲稿'});}
+  return base;
+}
+function railIndex(stage,type){
+  const map={ingesting:'concept',briefing:'concept',concept:'concept',scripting:'script',
+    storyboarding:'storyboard',drafting:'storyboard',storyboard:'storyboard',
+    voicing:'chunk',rendering:'chunk',assembling:'final',qa:'final',final:'final',done:'final'};
+  const key=map[stage];return railFor(type).findIndex(s=>s.k===key);
+}
+function vRail(){
+  const p=S.project, steps=railFor(p.type), cur=railIndex(p.stage,p.type);
+  return `<div class="rail">`+steps.map((s,idx)=>{
+    const st=idx<cur?'done':idx===cur?'cur':'';
+    return `<div class="step ${st}"><span class="num">${idx<cur?'✓':idx+1}</span>${s.l}</div>`+
+      (idx<steps.length-1?`<span class="bar ${idx<cur?'done':''}"></span>`:'');
+  }).join('')+`</div>`;
+}
+function vFourpack(){
+  const p=S.project,t=TYPES[p.type];
+  return `<div class="row" style="flex-wrap:wrap;gap:8px;margin:14px 0 22px">
+    <span class="chip">类型 <b>${t.name}</b></span>
+    <span class="chip">画幅 <b>${p.aspect}</b></span>
+    <span class="chip">风格 <b>${p.style}</b></span>
+    <span class="chip">骨架 <b>${railFor(p.type).length} 闸门</b></span>
+    <span class="chip">配音 <b>${p.vo?'开':'关'}</b></span>
+    ${p.assets.length?`<span class="chip">素材 <b>${p.assets.length}</b></span>`:''}
+  </div>`;
+}
+
+function vProject(){
+  const p=S.project;
+  return shell('home', `<div class="fade">
+    <div class="spaced"><div><h1 style="font-size:24px">${esc(p.title)}</h1></div><a onclick="go('home')">← 项目列表</a></div>
+    ${vFourpack()}
+    ${vRail()}
+    <div class="divider"></div>
+    ${stagePanel()}
+  </div>`, true);
+}
+
+/* ---- 各阶段面板 ---- */
+function stagePanel(){
+  const st=S.project.stage;
+  if(['ingesting','briefing','storyboarding','drafting','assembling','qa'].includes(st)) return vProgress(st);
+  if(st==='concept')   return vGateConcept();
+  if(st==='storyboard')return vGateStoryboard();
+  if(st==='rendering') return vGateChunks();
+  if(st==='final')     return vGateFinal();
+  return '';
+}
+
+const PROG_TXT={
+  ingesting:'抓取内容…', briefing:'本机 claude CLI 拆解定调 · 生成 brief + 统一 config…',
+  storyboarding:'本机 claude CLI 写分镜骨架 · 给每镜选渲染后端…', drafting:'gpt-image 逐镜出方向草稿…',
+  assembling:'成片合成 · 拼接 → 混音 → 烧字幕 → 导出…', qa:'体检中 · 跑类型特有 QA 规则…',
+};
+function vProgress(st){
+  const sub = st==='assembling'
+    ? `<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+        ${['拼接 concat','混音 mux','烧字幕','导出'].map(x=>`<span class="chip">${x}</span>`).join('')}
+       </div>`:'';
+  return `<div class="card pad fade">
+    <div class="row" style="gap:11px"><span class="spin"></span><b>${PROG_TXT[st]||st}</b><span class="chip" style="margin-left:auto">SSE 实时 · 模拟</span></div>
+    <div class="prog" style="margin-top:16px"><i id="pbar"></i></div>
+    ${sub}
+  </div>`;
+}
+
+/* 闸门① 方向 */
+function vGateConcept(){
+  const sel=S.project.concept;
+  const cards=CONCEPTS.map((c,idx)=>`<div class="sel ${sel===idx?'on':''}" onclick="pickConcept(${idx})">
+    <div class="spaced"><h2 style="font-size:16px">${c.title}</h2>${sel===idx?'<span class="tag bk-kenburns">已选</span>':''}</div>
+    <p class="aux" style="margin:8px 0 12px">${c.tone}</p>
+    <div class="row" style="flex-wrap:wrap;gap:6px">${c.words.map(w=>`<span class="chip">${w}</span>`).join('')}</div>
+  </div>`).join('');
+  return `<div class="fade">
+    <div class="spaced"><h2>闸门① · 选方向</h2><span class="aux">2–3 个概念方向，挑一个</span></div>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:16px">${cards}</div>
+    <div class="row" style="margin-top:24px"><div style="flex:1"></div>
+      <button class="btn" ${sel===null?'disabled':''} onclick="confirmConcept()">用这个方向 →</button></div>
+  </div>`;
+}
+function pickConcept(i){S.project.concept=i;render();}
+function confirmConcept(){S.project.stage='storyboarding';render();runProgress('storyboarding');}
+
+/* 闸门② 分镜（草稿卡） */
+function vGateStoryboard(){
+  const p=S.project;
+  const cards=p.scenes.map(s=>{
+    const b=RB[s.renderer];
+    return `<div class="card pad fade" style="background:#fff">
+      <div class="draft-img" style="aspect-ratio:${ratio(p.aspect)};background:${draftGrad(s.i)}">
+        <span class="corner">草稿 · 方向参考</span>
+        <span style="opacity:.85">镜 ${s.i} 草稿图</span>
+      </div>
+      <div class="spaced" style="margin-top:12px">
+        <b style="font-size:14px">#${s.i} ${s.role}</b>
+        <span class="tag ${b.cls}">${b.name}</span>
+      </div>
+      <p class="aux" style="margin:8px 0 4px"><b style="color:var(--text)">${s.dur}s</b> · ${esc(s.text)}</p>
+      ${s.rev?`<span class="chip" style="margin-top:6px">已改 ${s.rev} 版</span>`:''}
+    </div>`;
+  }).join('');
+  return `<div class="fade">
+    <div class="spaced"><h2>闸门② · 确认分镜</h2><span class="aux">每镜 = gpt-image 草稿 + 文字 beat + 后端标记</span></div>
+    <div class="banner info" style="margin:14px 0">草稿仅供<b>方向确认</b>，不是正片精确长相。确认后才按各自后端渲正片。</div>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">${cards}</div>
+    ${S.project.redo!==null?vRedoBox():''}
+    <div class="row" style="margin-top:24px">
+      <button class="btn ghost" onclick="openRedo()">打回重做</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="confirmStoryboard()">确认分镜 → 渲染</button>
+    </div>
+  </div>`;
+}
+function draftGrad(i){const g=['linear-gradient(135deg,#1b2740,#33507f)','linear-gradient(135deg,#3a2d52,#6b4a93)','linear-gradient(135deg,#14323a,#1f6b5e)','linear-gradient(135deg,#402a18,#a4690f)','linear-gradient(135deg,#2a2f3a,#4a5570)'];return g[(i-1)%g.length];}
+function vRedoBox(){
+  return `<div class="card pad fade" style="margin-top:18px;background:#fff">
+    <label class="fld">一句话意见（可空）— agent 会按意见重写分镜并追加一条 revision</label>
+    <textarea id="redotxt" placeholder="例：第 1 镜更聚焦痛点；整体节奏再快一点">更聚焦痛点</textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="btn sm" onclick="submitRedo()">提交重写</button>
+      <button class="btn ghost sm" onclick="cancelRedo()">取消</button>
+    </div>
+  </div>`;
+}
+function openRedo(){S.project.redo='';render();}
+function cancelRedo(){S.project.redo=null;render();}
+function submitRedo(){
+  S.project.redo=null;S.project.stage='drafting';render();
+  setTimeout(()=>{
+    const s=S.project.scenes;s[0].rev++;s[0].text='“别再把一天耗在对数据上。”（已按意见更聚焦痛点）';
+    S.project.stage='storyboard';render();toast('已重写 · 第 1 镜更新，revision +1');
+  },1300);
+  // 进度条
+  S.project.stage='drafting';render();runProgress('drafting','storyboard',false);
+}
+function confirmStoryboard(){
+  S.project.stage='rendering';
+  S.project.scenes.forEach(s=>{if(s.status!=='approved')s.status='pending';});
+  render();
+  startNextScene();
+}
+
+/* 闸门③ 分段（多后端流式） */
+function currentRenderingIndex(){return S.project.scenes.findIndex(s=>s.status==='pending'||s.status==='rendering');}
+function startNextScene(){
+  const sc=S.project.scenes, idx=sc.findIndex(s=>s.status==='pending');
+  if(idx<0)return; // 没有待渲的了
+  sc[idx].status='rendering';render();
+  setTimeout(()=>{ if(S.project.scenes[idx].status==='rendering'){S.project.scenes[idx].status='await_review';render();} }, 1400+idx*200);
+}
+function vGateChunks(){
+  const p=S.project;
+  const list=p.scenes.map(s=>{
+    const b=RB[s.renderer];
+    let media;
+    if(s.status==='approved'||s.status==='await_review'){
+      media=`<div class="player" style="aspect-ratio:${ratio(p.aspect)}">
+        <div class="play"></div>
+        <div class="meta"><span>#${s.i} ${s.role} · ${s.dur}s</span><span class="tag ${b.cls}">${b.name}</span></div>
+      </div>`;
+    } else if(s.status==='rendering'){
+      media=`<div class="skel" style="aspect-ratio:${ratio(p.aspect)}"><span class="lbl">${b.name} 渲染中…</span></div>`;
+    } else {
+      media=`<div class="skel" style="aspect-ratio:${ratio(p.aspect)};background:#F2F3F5"><span class="lbl muted">排队中 · ${b.name}</span></div>`;
+    }
+    const actions = s.status==='await_review'
+      ? `<div class="row" style="margin-top:12px">
+           <button class="btn ok sm" onclick="approveScene(${s.i})">👍 这段过，下一段</button>
+           <button class="btn danger sm" onclick="redoScene(${s.i})">👎 重做这段</button>
+         </div>`
+      : s.status==='approved'?`<div class="chip" style="margin-top:12px;color:var(--ok)">✅ 已通过${s.rev?` · 改过 ${s.rev} 版`:''}</div>`:'';
+    return `<div class="card pad fade" style="background:#fff">
+      <div style="max-width:${p.aspect==='9:16'?'300px':'100%'}">${media}</div>
+      ${actions}
+    </div>`;
+  }).join('');
+  const done=p.scenes.every(s=>s.status==='approved');
+  return `<div class="fade">
+    <div class="spaced"><h2>闸门③ · 逐段确认（多后端流式）</h2><span class="aux">渲完一段原位显示一段 · 不整页刷新</span></div>
+    <div class="banner info" style="margin:14px 0">每镜按自己的后端渲染：信息镜走 Remotion、氛围镜走生成式、动图标走 Lottie、素材图走推拉。统一 config 保证不出拼贴感。</div>
+    <div class="grid" style="grid-template-columns:repeat(2,1fr)">${list}</div>
+    ${done?`<div class="row" style="margin-top:22px"><div style="flex:1"></div><button class="btn" onclick="toAssemble()">全部通过 → 合成成片</button></div>`:''}
+  </div>`;
+}
+function approveScene(i){
+  const sc=S.project.scenes;sc[i-1].status='approved';render();
+  if(sc.some(s=>s.status==='pending')) startNextScene();
+}
+function redoScene(i){
+  const s=S.project.scenes[i-1];s.status='rendering';s.rev++;render();
+  setTimeout(()=>{ S.project.scenes[i-1].status='await_review';render();toast(`第 ${i} 镜已重渲 · revision +1`); },1300);
+}
+function toAssemble(){S.project.stage='assembling';render();runProgress('assembling','qa',true,()=>{runProgress('qa','final');});}
+
+/* 闸门④ 终检 */
+function vGateFinal(){
+  const p=S.project, narrow=p.aspect==='9:16';
+  return `<div class="fade">
+    <div class="spaced"><h2>闸门④ · 终检与下载</h2><span class="aux">${p.aspect} 成片</span></div>
+    <div class="banner warn" style="margin:14px 0">QA：第 3 镜字幕轻微超出安全区（提示项，不阻断下载）。</div>
+    <div style="display:grid;place-items:center;margin:8px 0 22px">
+      <div style="${narrow?'max-width:300px':'max-width:680px'};width:100%">
+        <div class="player" style="aspect-ratio:${ratio(p.aspect)};max-height:70vh">
+          <div class="play"></div>
+          <div class="meta"><span>${esc(p.title)} · 19s</span><span>${p.aspect}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:center;flex-wrap:wrap;gap:10px">
+      <button class="btn" onclick="dl('mp4')">下载 MP4</button>
+      <button class="btn ghost" onclick="dl('srt')">字幕 SRT</button>
+      <button class="btn ghost" onclick="dl('audio')">音频</button>
+      <button class="btn ghost" onclick="dl('zip')">打包 ZIP</button>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:26px">
+      <button class="btn ghost" onclick="finishProject()">完成，回到项目列表</button>
+    </div>
+  </div>`;
+}
+function dl(k){toast('已下载 '+k+'（模拟）');}
+function finishProject(){
+  const p=S.project;
+  if(!S.projects.find(x=>x.id===p.id)) S.projects.unshift({id:p.id,title:p.title,type:p.type,aspect:p.aspect,stage:'done'});
+  else S.projects.find(x=>x.id===p.id).stage='done';
+  toast('项目已完成');go('home');
+}
+
+/* ---------- 进度条驱动 + 阶段推进 ---------- */
+function runProgress(stage, next, autoNext=true, after){
+  // 推进条
+  setTimeout(()=>{const b=$('#pbar');if(b)b.style.width='92%';},80);
+  setTimeout(()=>{
+    if(S.project.stage!==stage)return;
+    if(autoNext && next){ S.project.stage=next; render(); if(after) after(); }
+  }, stage==='assembling'?1700:1200);
+}
+
+/* ============================================================
+   渲染主入口
+   ============================================================ */
+function render(){
+  let html='';
+  switch(S.screen){
+    case 'login':    html=vLogin();   break;
+    case 'settings': html=vSettings();break;
+    case 'home':     html=vHome();    break;
+    case 'new':      html=vNew();     break;
+    case 'project':  html=vProject(); break;
+  }
+  $('#app').innerHTML=html;
+}
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+[
+  {
+    "name": "冷夜蓝",
+    "label": "自定义(手填) · 冷夜蓝",
+    "bg": "#0B0B0F",
+    "fg": "#FFFFFF",
+    "accent": "#5B9BFF",
+    "id": "custom-2ff00190",
+    "custom": true,
+    "createdAt": "2026-06-13T08:43:56.153Z"
+  },
+  {
+    "name": "赛博霓虹",
+    "label": "自定义(描述) · 赛博霓虹",
+    "bg": "#0a0a0a",
+    "fg": "#ff00ff",
+    "accent": "#00ffff",
+    "font": "未来感无衬线体",
+    "descriptor": "高饱和霓虹色块叠加，暗黑背景强化紫粉对比，倾斜构图营造赛博动感，局部故障风扫描线增强未来质感",
+    "id": "custom-fd547695",
+    "custom": true,
+    "createdAt": "2026-06-13T08:44:04.596Z"
+  },
+  {
+    "name": "参考图测试",
+    "label": "自定义(参考图) · 参考图测试",
+    "bg": "#f7771b",
+    "fg": "#172438",
+    "accent": "#2563EB",
+    "heroImage": "files/f-662670f9-ref.png",
+    "descriptor": "由参考图自动提取的色板风格",
+    "id": "custom-f4b98ec6",
+    "custom": true,
+    "createdAt": "2026-06-13T08:44:23.021Z"
+  }
+]
