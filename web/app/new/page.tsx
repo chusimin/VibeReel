@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import TopBar from "@/components/TopBar";
+import { ReactNode, Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { EnginePill } from "@/components/AppShell";
 import {
   api,
   toast,
@@ -23,34 +22,34 @@ import type {
 } from "@/lib/types";
 import type { StylePack } from "@/lib/styles";
 
-const WIZ_STEPS = ["选类型", "填输入", "选画幅", "选风格", "素材/角色"];
+// 视频类型展示名（对齐设计稿措辞）。
+const TYPE_LABEL: Record<VideoType, { name: string; desc: string }> = {
+  showreel: { name: "产品展示", desc: "适合发布会、功能介绍、产品更新" },
+  teaching: { name: "教学短片", desc: "适合演示、操作教学、知识传播" },
+  popsci: { name: "知识科普", desc: "适合概念解析、原理科普、信息解读" },
+};
 
-/* ============================================================
-   风格主图：内置 → /styles/<id>.png；自定义 → 库主图 or 色板渐变占位
-   ============================================================ */
+// /new 顶部预览步进器（静态：内容准备→…→最终检查）。design 为准：不展示讲稿步。
+const JOURNEY = ["内容准备", "方向确认", "分镜确认", "分段预览", "最终检查"];
+
+/* 单页表单分区（标题式，不用①②③避免与底部步进器双重编号——修复审查 #4） */
+function Section({ title, desc, children }: { title: string; desc?: string; children: ReactNode }) {
+  return (
+    <section style={{ marginBottom: 30 }}>
+      <h2 style={{ fontSize: 16 }}>{title}</h2>
+      {desc ? <p className="aux" style={{ margin: "4px 0 14px" }}>{desc}</p> : <div style={{ height: 12 }} />}
+      {children}
+    </section>
+  );
+}
+
 function StyleThumb({ s }: { s: StylePack }) {
   const [err, setErr] = useState(false);
   const src = s.custom && s.heroImage ? libraryFileUrl(s.heroImage) : `/styles/${s.id}.png`;
   if (err || (s.custom && !s.heroImage)) {
     return (
-      <div
-        className="thumb"
-        style={{
-          background: `linear-gradient(135deg, ${s.bg}, ${s.accent})`,
-          display: "grid",
-          placeItems: "center",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <span
-          style={{
-            color: s.fg,
-            fontSize: 12,
-            background: "rgba(255,255,255,.55)",
-            padding: "2px 10px",
-            borderRadius: 999,
-          }}
-        >
+      <div className="thumb" style={{ background: `linear-gradient(135deg, ${s.bg}, ${s.accent})`, display: "grid", placeItems: "center" }}>
+        <span style={{ color: s.fg, fontSize: 12, background: "rgba(0,0,0,.4)", padding: "2px 10px", borderRadius: 999 }}>
           {s.custom ? "自定义风格" : "主图待上传"}
         </span>
       </div>
@@ -58,61 +57,45 @@ function StyleThumb({ s }: { s: StylePack }) {
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={s.name}
-      className="thumb"
-      style={{ width: "100%", objectFit: "cover", border: "1px solid var(--border)" }}
-      onError={() => setErr(true)}
-    />
+    <img src={src} alt={s.name} className="thumb" style={{ width: "100%", objectFit: "cover" }} onError={() => setErr(true)} />
   );
 }
 
-/* 草稿输入项（#2 多输入：浏览器侧暂存，创建后再落库） */
-interface DraftText {
-  kind: "url" | "idea";
-  value: string;
-}
-interface DraftAssetFile {
-  file: File;
-  url: string; // 预览 objectURL
-}
-interface DraftColor {
-  ref: string;
-  name: string;
-}
+interface DraftText { kind: "url" | "idea"; value: string; }
+interface DraftAssetFile { file: File; url: string; }
+interface DraftColor { ref: string; name: string; }
 
 export default function NewProjectPage() {
+  return (
+    <Suspense fallback={<div className="center"><span className="spin" /></div>}>
+      <NewProjectInner />
+    </Suspense>
+  );
+}
+
+function NewProjectInner() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const search = useSearchParams();
+
   const [type, setType] = useState<VideoType>("showreel");
-
-  // #2 多输入
-  const [texts, setTexts] = useState<DraftText[]>([
-    { kind: "url", value: "https://acme.example.com" },
-  ]);
+  const [texts, setTexts] = useState<DraftText[]>([{ kind: "url", value: "https://acme.example.com" }]);
   const [codeFiles, setCodeFiles] = useState<File[]>([]);
-
   const [aspect, setAspect] = useState<Aspect>("16:9");
-
-  // #4 风格（内置 + 自定义）
   const [style, setStyle] = useState("editorial-saas");
   const [customStyles, setCustomStyles] = useState<StylePack[]>([]);
-
-  // #1 项目素材
   const [assetFiles, setAssetFiles] = useState<DraftAssetFile[]>([]);
   const [colors, setColors] = useState<DraftColor[]>([]);
-
-  // #1 角色/品牌库
   const [roles, setRoles] = useState<RoleEntry[]>([]);
   const [roleRefs, setRoleRefs] = useState<string[]>([]);
-
   const [busy, setBusy] = useState(false);
 
-  // 进 4/5 步时拉库数据
+  // 进页面拉库数据 + 接受首页模板带来的 ?type=
   useEffect(() => {
     api.listCustomStyles().then((d) => setCustomStyles(d.styles)).catch(() => {});
     api.listRoles().then((d) => setRoles(d.roles)).catch(() => {});
+    const t = search.get("type") as VideoType | null;
+    if (t && TYPES[t]) pickType(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function pickType(k: VideoType) {
@@ -120,331 +103,170 @@ export default function NewProjectPage() {
     const reco = recommendedFor(k);
     setStyle(reco[0] ?? STYLE_PACKS[0].id);
   }
-
-  // ---- 多输入编辑 ----
-  function addText(kind: "url" | "idea") {
-    setTexts([...texts, { kind, value: kind === "url" ? "https://" : "" }]);
-  }
-  function setTextAt(i: number, patch: Partial<DraftText>) {
-    setTexts(texts.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
-  }
-  function rmText(i: number) {
-    setTexts(texts.filter((_, idx) => idx !== i));
-  }
-  function addCodeFiles(files: FileList | null) {
-    if (!files) return;
-    setCodeFiles([...codeFiles, ...Array.from(files)]);
-  }
-  function rmCode(i: number) {
-    setCodeFiles(codeFiles.filter((_, idx) => idx !== i));
-  }
-
-  // ---- 素材 ----
+  function addText(kind: "url" | "idea") { setTexts([...texts, { kind, value: kind === "url" ? "https://" : "" }]); }
+  function setTextAt(i: number, patch: Partial<DraftText>) { setTexts(texts.map((t, idx) => (idx === i ? { ...t, ...patch } : t))); }
+  function rmText(i: number) { setTexts(texts.filter((_, idx) => idx !== i)); }
+  function addCodeFiles(files: FileList | null) { if (files) setCodeFiles([...codeFiles, ...Array.from(files)]); }
+  function rmCode(i: number) { setCodeFiles(codeFiles.filter((_, idx) => idx !== i)); }
   function addAssetFiles(files: FileList | null) {
     if (!files) return;
-    const next = Array.from(files).map((file) => ({
-      file,
-      url: URL.createObjectURL(file),
-    }));
-    setAssetFiles([...assetFiles, ...next]);
+    setAssetFiles([...assetFiles, ...Array.from(files).map((file) => ({ file, url: URL.createObjectURL(file) }))]);
   }
-  function rmAsset(i: number) {
-    setAssetFiles(assetFiles.filter((_, idx) => idx !== i));
-  }
-  function addColor() {
-    setColors([...colors, { ref: "#5B9BFF", name: "品牌色" }]);
-  }
-  function setColorAt(i: number, patch: Partial<DraftColor>) {
-    setColors(colors.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
-  }
-  function rmColor(i: number) {
-    setColors(colors.filter((_, idx) => idx !== i));
+  function rmAsset(i: number) { setAssetFiles(assetFiles.filter((_, idx) => idx !== i)); }
+  function addColor() { setColors([...colors, { ref: "#5B9BFF", name: "品牌色" }]); }
+  function setColorAt(i: number, patch: Partial<DraftColor>) { setColors(colors.map((c, idx) => (idx === i ? { ...c, ...patch } : c))); }
+  function rmColor(i: number) { setColors(colors.filter((_, idx) => idx !== i)); }
+  function toggleRole(id: string) { setRoleRefs((r) => (r.includes(id) ? r.filter((x) => x !== id) : [...r, id])); }
+
+  const hasInput = texts.some((t) => t.value.trim()) || codeFiles.length > 0;
+
+  async function createProject(autostart: boolean) {
+    const inputs: InputItem[] = texts.filter((t) => t.value.trim()).map((t) => ({ id: "", kind: t.kind, value: t.value.trim() }));
+    if (inputs.length === 0 && codeFiles.length > 0) {
+      inputs.push({ id: "", kind: "idea", value: `基于上传代码包「${codeFiles[0].name}」制作视频` });
+    }
+    if (inputs.length === 0) {
+      toast("至少填一条链接或想法");
+      return null;
+    }
+    const { id } = await api.createProject({ videoType: type, inputs, aspect, styleId: style, roleRefs, autostart: false });
+    for (const f of codeFiles) await api.addInputFile(id, f);
+    for (const a of assetFiles) await api.uploadAsset(id, a.file, a.file.type.includes("svg") ? "logo" : "image");
+    for (const c of colors) await api.addAssetMeta(id, { kind: "color", ref: c.ref, name: c.name });
+    if (autostart) await api.start(id);
+    return id;
   }
 
-  // ---- 角色 ----
-  function toggleRole(id: string) {
-    setRoleRefs((r) => (r.includes(id) ? r.filter((x) => x !== id) : [...r, id]));
-  }
-
-  // ---- 两段式创建 ----
-  async function finish() {
+  async function generate() {
     setBusy(true);
     try {
-      const inputs: InputItem[] = texts
-        .filter((t) => t.value.trim())
-        .map((t) => ({ id: "", kind: t.kind, value: t.value.trim() }));
-      // 仅有代码包时，合成一句想法兜底（后端创建需 ≥1 输入）
-      if (inputs.length === 0 && codeFiles.length > 0) {
-        inputs.push({ id: "", kind: "idea", value: `基于上传代码包「${codeFiles[0].name}」制作视频` });
-      }
-      if (inputs.length === 0) {
-        toast("至少填一条链接或想法");
-        setBusy(false);
-        return;
-      }
-
-      const { id } = await api.createProject({
-        videoType: type,
-        inputs,
-        aspect,
-        styleId: style,
-        roleRefs,
-        autostart: false,
-      });
-
-      // 传代码包（#2）
-      for (const f of codeFiles) {
-        await api.addInputFile(id, f);
-      }
-      // 传素材（#1）
-      for (const a of assetFiles) {
-        await api.uploadAsset(id, a.file, a.file.type.includes("svg") ? "logo" : "image");
-      }
-      for (const c of colors) {
-        await api.addAssetMeta(id, { kind: "color", ref: c.ref, name: c.name });
-      }
-
-      await api.start(id);
+      const id = await createProject(true);
+      if (!id) { setBusy(false); return; }
       router.push("/projects/" + id);
     } catch (e) {
-      const status = (e as { status?: number }).status;
-      if (status === 401) {
-        router.push("/login");
-        return;
-      }
+      if ((e as { status?: number }).status === 401) return router.push("/login");
       toast("创建失败，请重试");
       setBusy(false);
     }
   }
+  async function saveDraft() {
+    setBusy(true);
+    try {
+      const id = await createProject(false);
+      if (!id) { setBusy(false); return; }
+      toast("已保存草稿");
+      router.push("/");
+    } catch (e) {
+      if ((e as { status?: number }).status === 401) return router.push("/login");
+      toast("保存失败，请重试");
+      setBusy(false);
+    }
+  }
 
-  const last = step === 5;
   const reco = recommendedFor(type);
   const allStyles: StylePack[] = [...STYLE_PACKS, ...customStyles];
-  const hasInput = texts.some((t) => t.value.trim()) || codeFiles.length > 0;
+  const curStyle = allStyles.find((s) => s.id === style);
 
   return (
     <div className="shell">
-      <TopBar active="home" />
-      <div className="page">
-        <div className="fade">
-          <div className="spaced" style={{ marginBottom: 6 }}>
-            <h1>新建项目</h1>
-            <Link href="/">取消</Link>
-          </div>
+      {/* 顶栏：返回 + 品牌 + 引擎（无左导航——专注创建流，对齐设计稿 02） */}
+      <div className="topbar">
+        <span className="back" onClick={() => router.push("/")}>← 返回首页</span>
+        <div className="brand"><span className="dot" />VibeReel</div>
+        <div className="sp" />
+        <EnginePill />
+      </div>
 
-          {/* 步骤指示 rail */}
-          <div className="rail" style={{ margin: "18px 0 26px" }}>
-            {WIZ_STEPS.map((s, idx) => {
-              const n = idx + 1;
-              const cls = n < step ? "done" : n === step ? "cur" : "";
-              return (
-                <span key={s} style={{ display: "contents" }}>
-                  <div className={`step ${cls}`}>
-                    <span className="num">{n < step ? "✓" : n}</span>
-                    {s}
-                  </div>
-                  {idx < 4 ? (
-                    <span className={`bar ${n < step ? "done" : ""}`}></span>
-                  ) : null}
-                </span>
-              );
-            })}
-          </div>
+      <div className="page wide fade">
+        <h1 style={{ marginBottom: 4 }}>新建视频</h1>
+        <p className="muted" style={{ marginBottom: 26 }}>准备内容、画幅和风格，先生成可确认的方向。</p>
 
-          {/* 步骤 1：选类型 */}
-          {step === 1 && (
-            <>
-              <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
-                {(Object.keys(TYPES) as VideoType[]).map((k) => {
-                  const t = TYPES[k];
-                  return (
-                    <div
-                      key={k}
-                      className={`sel ${type === k ? "on" : ""}`}
-                      onClick={() => pickType(k)}
-                    >
-                      <div className="thumb" style={{ background: t.grad }}></div>
-                      <h2 style={{ fontSize: 16 }}>{t.name}</h2>
-                      <p className="aux" style={{ margin: "6px 0 10px" }}>{t.desc}</p>
-                      <span className="chip">{t.note}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="hint" style={{ marginTop: 16 }}>
-                📌 选类型 = 装上该类型的<b>四件套</b>（知识包 / 风格包 / 闸门配置 / QA 规则），再走同一条公共骨架。
-              </div>
-            </>
-          )}
-
-          {/* 步骤 2：填输入（#2 多输入：链接/想法多条 + 代码包） */}
-          {step === 2 && (
-            <div style={{ maxWidth: 660 }}>
-              <div className="banner info" style={{ marginBottom: 16 }}>
-                可同时投<b>多条</b>：链接、想法、产品代码包一起发，后台会统一抓取并<b>拆成可引用料块</b>。
-              </div>
-
-              {/* 文本输入列表 */}
+        <div className="grid" style={{ gridTemplateColumns: "1fr 320px", alignItems: "start", gap: 28 }}>
+          {/* ---------------- 左：表单分区 ---------------- */}
+          <div>
+            <Section title="内容来源" desc="可同时投多条：链接、想法、产品代码包一起发，后台统一抓取并拆成可引用料块。">
               <div className="col" style={{ gap: 12 }}>
                 {texts.map((t, i) => (
-                  <div key={i} className="card pad" style={{ background: "#fff" }}>
+                  <div key={i} className="card pad">
                     <div className="spaced" style={{ marginBottom: 10 }}>
-                      <div className="row" style={{ gap: 8 }}>
-                        <span
-                          className={`pill ${t.kind === "url" ? "on" : ""}`}
-                          onClick={() => setTextAt(i, { kind: "url", value: t.kind === "url" ? t.value : "https://" })}
-                        >
-                          链接 URL
-                        </span>
-                        <span
-                          className={`pill ${t.kind === "idea" ? "on" : ""}`}
-                          onClick={() => setTextAt(i, { kind: "idea", value: t.kind === "idea" ? t.value : "" })}
-                        >
-                          想法
-                        </span>
+                      <div className="seg">
+                        <span className={`pill ${t.kind === "url" ? "on" : ""}`} onClick={() => setTextAt(i, { kind: "url", value: t.kind === "url" ? t.value : "https://" })}>链接</span>
+                        <span className={`pill ${t.kind === "idea" ? "on" : ""}`} onClick={() => setTextAt(i, { kind: "idea", value: t.kind === "idea" ? t.value : "" })}>想法</span>
                       </div>
-                      <button className="btn ghost sm" onClick={() => rmText(i)}>
-                        ✕ 删除
-                      </button>
+                      {texts.length > 1 ? <button className="btn ghost sm" onClick={() => rmText(i)}>✕</button> : null}
                     </div>
                     {t.kind === "url" ? (
-                      <input
-                        className="input"
-                        value={t.value}
-                        placeholder="https://..."
-                        onChange={(e) => setTextAt(i, { value: e.target.value })}
-                      />
+                      <input className="input" value={t.value} placeholder="粘贴产品页、文章或作品链接" onChange={(e) => setTextAt(i, { value: e.target.value })} />
                     ) : (
-                      <textarea
-                        placeholder="例：把我们的数据分析工具做成 15s 高级感 showreel"
-                        value={t.value}
-                        onChange={(e) => setTextAt(i, { value: e.target.value })}
-                      />
+                      <textarea placeholder="例：把我们的数据分析工具做成 15s 高级感 showreel" value={t.value} onChange={(e) => setTextAt(i, { value: e.target.value })} />
                     )}
                   </div>
                 ))}
               </div>
-
               <div className="row" style={{ gap: 10, marginTop: 12 }}>
-                <button className="btn ghost sm" onClick={() => addText("url")}>+ 加链接</button>
-                <button className="btn ghost sm" onClick={() => addText("idea")}>+ 加想法</button>
+                <button className="btn ghost sm" onClick={() => addText("url")}>＋ 加链接</button>
+                <button className="btn ghost sm" onClick={() => addText("idea")}>＋ 加想法</button>
+                <label className="btn ghost sm" style={{ cursor: "pointer" }}>
+                  ⬆ 上传代码包
+                  <input type="file" accept=".zip" multiple style={{ display: "none" }} onChange={(e) => addCodeFiles(e.target.files)} />
+                </label>
               </div>
-
-              {/* 代码包上传 */}
-              <h2 style={{ fontSize: 15, margin: "24px 0 10px" }}>产品代码包（可选）</h2>
-              <label
-                className="card pad"
-                style={{ borderStyle: "dashed", textAlign: "center", cursor: "pointer", display: "block" }}
-              >
-                <div style={{ fontSize: 22 }}>🗜️</div>
-                <p style={{ fontWeight: 500, margin: "6px 0 2px" }}>点击上传 .zip 代码包</p>
-                <p className="aux">后台自动解压、读 README/源码，拆成可引用料块</p>
-                <input
-                  type="file"
-                  accept=".zip"
-                  multiple
-                  style={{ display: "none" }}
-                  onChange={(e) => addCodeFiles(e.target.files)}
-                />
-              </label>
               {codeFiles.length ? (
                 <div className="row" style={{ flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                   {codeFiles.map((f, i) => (
-                    <span key={i} className="chip">
-                      🗜️ {f.name}
-                      <span style={{ cursor: "pointer", marginLeft: 6 }} onClick={() => rmCode(i)}>✕</span>
-                    </span>
+                    <span key={i} className="chip">🗜 {f.name}<span style={{ cursor: "pointer", marginLeft: 6 }} onClick={() => rmCode(i)}>✕</span></span>
                   ))}
                 </div>
               ) : null}
-            </div>
-          )}
+            </Section>
 
-          {/* 步骤 3：选画幅 */}
-          {step === 3 && (
-            <>
-              <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", maxWidth: 720 }}>
-                {([
-                  { a: "16:9" as Aspect, label: "横屏 · 默认", desc: "网页 / B 站 / YouTube" },
-                  { a: "9:16" as Aspect, label: "竖屏", desc: "抖音 / Reels · --platform douyin" },
-                  { a: "1:1" as Aspect, label: "方形", desc: "Instagram / 朋友圈" },
-                ]).map(({ a, label, desc }) => (
-                  <div
-                    key={a}
-                    className={`sel ${aspect === a ? "on" : ""}`}
-                    onClick={() => setAspect(a)}
-                  >
-                    <div style={{ height: 130, display: "grid", placeItems: "center", marginBottom: 14 }}>
-                      <div
-                        style={{
-                          aspectRatio: ratio(a),
-                          height: a === "16:9" ? "auto" : 120,
-                          width: a === "16:9" ? "92%" : "auto",
-                          maxWidth: "100%",
-                          maxHeight: 120,
-                          borderRadius: 10,
-                          background: "#0B0B0F",
-                          display: "grid",
-                          placeItems: "center",
-                        }}
-                      >
-                        <span style={{ color: "#fff", opacity: 0.6, fontSize: 12 }}>{a}</span>
-                      </div>
-                    </div>
-                    <div className="spaced">
-                      <h2 style={{ fontSize: 15 }}>{a}</h2>
-                      {aspect === a ? <span className="tag bk-kenburns">已选</span> : null}
-                    </div>
-                    <p className="aux" style={{ marginTop: 5 }}>
-                      <b style={{ color: "var(--text)" }}>{label}</b>
-                    </p>
-                    <p className="aux" style={{ marginTop: 3 }}>{desc}</p>
+            <Section title="视频类型">
+              <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+                {(Object.keys(TYPES) as VideoType[]).map((k) => (
+                  <div key={k} className={`sel ${type === k ? "on" : ""}`} onClick={() => pickType(k)}>
+                    <span className="check">✓</span>
+                    <div className="thumb" style={{ height: 64 }} />
+                    <h2 style={{ fontSize: 15 }}>{TYPE_LABEL[k].name}</h2>
+                    <p className="aux" style={{ marginTop: 5 }}>{TYPE_LABEL[k].desc}</p>
                   </div>
                 ))}
               </div>
-              <div className="hint" style={{ marginTop: 16 }}>
-                ⚠️ 9:16 会显式告诉引擎 <span className="mono">--platform douyin</span>，不会因默认出成 16:9。
+            </Section>
+
+            <Section title="画幅">
+              <div className="seg">
+                {([
+                  { a: "16:9" as Aspect, label: "横屏" },
+                  { a: "9:16" as Aspect, label: "竖屏" },
+                  { a: "1:1" as Aspect, label: "方形" },
+                ]).map(({ a, label }) => (
+                  <span key={a} className={`pill ${aspect === a ? "on" : ""}`} onClick={() => setAspect(a)} style={{ minWidth: 110, textAlign: "center" }}>
+                    {a} · {label}
+                  </span>
+                ))}
               </div>
-            </>
-          )}
+            </Section>
 
-          {/* 步骤 4：选风格（内置 11 + 自定义 + 自定义创建器） */}
-          {step === 4 && (
-            <StyleStep
-              allStyles={allStyles}
-              reco={reco}
-              style={style}
-              setStyle={setStyle}
-              onCreated={async (newId) => {
-                const d = await api.listCustomStyles();
-                setCustomStyles(d.styles);
-                setStyle(newId);
-              }}
-            />
-          )}
+            <Section title="风格">
+              <StyleStep
+                allStyles={allStyles}
+                reco={reco}
+                style={style}
+                setStyle={setStyle}
+                onCreated={async (newId) => {
+                  const d = await api.listCustomStyles();
+                  setCustomStyles(d.styles);
+                  setStyle(newId);
+                }}
+              />
+            </Section>
 
-          {/* 步骤 5：素材 + 角色 */}
-          {step === 5 && (
-            <div style={{ maxWidth: 720 }}>
-              {/* 素材库 */}
-              <h2 style={{ fontSize: 16 }}>项目素材（可选）</h2>
-              <p className="aux" style={{ margin: "4px 0 12px" }}>
-                产品截图 / logo / 品牌色——传得越全，<span className="mono">still-kenburns</span> 推拉镜越能用上真图。
-              </p>
-              <label
-                className="card pad"
-                style={{ borderStyle: "dashed", textAlign: "center", cursor: "pointer", display: "block" }}
-              >
-                <div style={{ fontSize: 24 }}>⬆️</div>
-                <p style={{ fontWeight: 500, margin: "8px 0 4px" }}>点击上传图片 / logo</p>
-                <p className="aux">支持多选，png/jpg/svg</p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  style={{ display: "none" }}
-                  onChange={(e) => addAssetFiles(e.target.files)}
-                />
+            <Section title="素材准备" desc="可选——产品截图 / logo / 品牌色 / 角色，传得越全，成片越贴。">
+              <label className="dropzone" style={{ display: "block", cursor: "pointer" }}>
+                <div style={{ fontSize: 22, marginBottom: 6 }}>⬆</div>
+                <p style={{ color: "var(--text-2)", fontWeight: 500 }}>点击上传图片 / logo</p>
+                <p className="aux">支持多选，png / jpg / svg</p>
+                <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => addAssetFiles(e.target.files)} />
               </label>
               {assetFiles.length ? (
                 <div className="grid" style={{ gridTemplateColumns: "repeat(4,1fr)", marginTop: 14 }}>
@@ -453,45 +275,25 @@ export default function NewProjectPage() {
                       <div className="thumb" style={{ height: 72, margin: 0, position: "relative", overflow: "hidden" }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={a.url} alt={a.file.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        <span
-                          className="corner"
-                          onClick={() => rmAsset(i)}
-                          style={{ cursor: "pointer", top: 6, right: 6, left: "auto" }}
-                        >
-                          ✕
-                        </span>
+                        <span className="corner" onClick={() => rmAsset(i)} style={{ cursor: "pointer", top: 6, right: 6, left: "auto" }}>✕</span>
                       </div>
-                      <span className="aux" style={{ textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {a.file.name}
-                      </span>
+                      <span className="aux" style={{ textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.file.name}</span>
                     </div>
                   ))}
                 </div>
               ) : null}
-
-              {/* 品牌色 */}
               <div className="row" style={{ gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-                <button className="btn ghost sm" onClick={addColor}>+ 加品牌色</button>
+                <button className="btn ghost sm" onClick={addColor}>＋ 加品牌色</button>
                 {colors.map((c, i) => (
                   <span key={i} className="chip" style={{ gap: 8 }}>
-                    <input
-                      type="color"
-                      value={c.ref}
-                      onChange={(e) => setColorAt(i, { ref: e.target.value })}
-                      style={{ width: 22, height: 22, border: "none", background: "none", padding: 0, cursor: "pointer" }}
-                    />
-                    <input
-                      value={c.name}
-                      onChange={(e) => setColorAt(i, { name: e.target.value })}
-                      style={{ width: 70, border: "none", background: "transparent", fontSize: 12.5 }}
-                    />
+                    <input type="color" value={c.ref} onChange={(e) => setColorAt(i, { ref: e.target.value })} style={{ width: 22, height: 22, border: "none", background: "none", padding: 0, cursor: "pointer" }} />
+                    <input value={c.name} onChange={(e) => setColorAt(i, { name: e.target.value })} style={{ width: 70, border: "none", background: "transparent", fontSize: 12.5, color: "var(--text)" }} />
                     <span style={{ cursor: "pointer" }} onClick={() => rmColor(i)}>✕</span>
                   </span>
                 ))}
               </div>
 
-              {/* 角色 / 品牌库 */}
-              <div className="divider" style={{ margin: "26px 0 16px" }}></div>
+              <div className="divider" />
               <RoleStep
                 roles={roles}
                 roleRefs={roleRefs}
@@ -502,26 +304,44 @@ export default function NewProjectPage() {
                   setRoleRefs((r) => [...r, id]);
                 }}
               />
-            </div>
-          )}
-
-          {/* 导航按钮 */}
-          <div className="row" style={{ marginTop: 28 }}>
-            {step > 1 ? (
-              <button className="btn ghost" onClick={() => setStep((s) => s - 1)}>上一步</button>
-            ) : null}
-            <div style={{ flex: 1 }}></div>
-            {step === 5 ? (
-              <button className="btn ghost" disabled={busy} onClick={finish}>跳过，直接生成</button>
-            ) : null}
-            <button
-              className="btn"
-              disabled={busy || (step === 2 && !hasInput)}
-              onClick={() => (last ? finish() : setStep((s) => s + 1))}
-            >
-              {last ? (busy ? "创建中…" : "开始生成 →") : "下一步"}
-            </button>
+            </Section>
           </div>
+
+          {/* ---------------- 右：生成摘要（贴边） ---------------- */}
+          <div style={{ position: "sticky", top: 80 }}>
+            <div className="summary">
+              <h3>生成摘要</h3>
+              <div className="kv"><span className="k">类型</span><span className="v">{TYPE_LABEL[type].name}</span></div>
+              <div className="kv"><span className="k">画幅</span><span className="v">{aspect}</span></div>
+              <div className="kv"><span className="k">风格</span><span className="v">{curStyle?.name ?? style}</span></div>
+              <div className="kv"><span className="k">素材</span><span className="v">{assetFiles.length + colors.length} 项</span></div>
+              {/* 配音/草稿图为只读派生值（随类型，后端决定）——不做假开关，修复审查 #3 */}
+              <div className="kv"><span className="k">草稿图</span><span className="v">开启</span></div>
+              <div className="kv"><span className="k">配音</span><span className="v">{TYPES[type].vo ? "开启" : "关闭"}<span className="dim" style={{ fontWeight: 400, marginLeft: 6, fontSize: 11 }}>随类型</span></span></div>
+            </div>
+
+            <button className="btn block" style={{ marginTop: 14 }} disabled={busy || !hasInput} onClick={generate}>
+              {busy ? "创建中…" : "✨ 生成方向"}
+            </button>
+            <button className="btn ghost block" style={{ marginTop: 10 }} disabled={busy || !hasInput} onClick={saveDraft}>
+              保存草稿
+            </button>
+            {!hasInput ? <p className="aux" style={{ marginTop: 10, textAlign: "center" }}>先填一条链接或想法</p> : null}
+          </div>
+        </div>
+
+        {/* 底部全局步进器（内容准备 = 当前；预览整段旅程） */}
+        <div className="divider" style={{ margin: "32px 0 18px" }} />
+        <div className="rail">
+          {JOURNEY.map((s, idx) => (
+            <span key={s} style={{ display: "contents" }}>
+              <div className={`step ${idx === 0 ? "cur" : ""}`}>
+                <span className="num">{idx + 1}</span>
+                {s}
+              </div>
+              {idx < JOURNEY.length - 1 ? <span className="bar" /> : null}
+            </span>
+          ))}
         </div>
       </div>
     </div>
@@ -529,20 +349,12 @@ export default function NewProjectPage() {
 }
 
 /* ============================================================
-   步骤 4 子组件：风格网格 + 自定义风格创建器（#4 三法）
+   风格网格 + 自定义风格创建器（#4 三法）—— 逻辑保持不变
    ============================================================ */
 function StyleStep({
-  allStyles,
-  reco,
-  style,
-  setStyle,
-  onCreated,
+  allStyles, reco, style, setStyle, onCreated,
 }: {
-  allStyles: StylePack[];
-  reco: string[];
-  style: string;
-  setStyle: (id: string) => void;
-  onCreated: (newId: string) => Promise<void>;
+  allStyles: StylePack[]; reco: string[]; style: string; setStyle: (id: string) => void; onCreated: (newId: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -551,38 +363,20 @@ function StyleStep({
         {allStyles.map((s) => {
           const isReco = reco.includes(s.id);
           return (
-            <div
-              key={s.id}
-              className={`sel ${style === s.id ? "on" : ""}`}
-              onClick={() => setStyle(s.id)}
-              style={{ position: "relative" }}
-            >
-              {isReco ? (
-                <span className="tag bk-kenburns" style={{ position: "absolute", top: 12, right: 12 }}>推荐</span>
-              ) : s.custom ? (
-                <span className="tag" style={{ position: "absolute", top: 12, right: 12 }}>自定义</span>
-              ) : null}
+            <div key={s.id} className={`sel ${style === s.id ? "on" : ""}`} onClick={() => setStyle(s.id)}>
+              {isReco ? <span className="tag reco" style={{ position: "absolute", top: 12, right: 12 }}>推荐</span> : s.custom ? <span className="tag" style={{ position: "absolute", top: 12, right: 12 }}>自定义</span> : null}
               <StyleThumb s={s} />
-              <div className="row" style={{ gap: 8, marginBottom: 12 }}>
+              <div className="row" style={{ gap: 8, margin: "12px 0" }}>
                 {[s.bg, s.fg, s.accent].map((c, i) => (
-                  <span
-                    key={i}
-                    style={{ width: 26, height: 26, borderRadius: 7, background: c, border: "1px solid var(--border)", display: "inline-block" }}
-                  ></span>
+                  <span key={i} style={{ width: 22, height: 22, borderRadius: 6, background: c, border: "1px solid var(--border)", display: "inline-block" }} />
                 ))}
               </div>
-              <h2 style={{ fontSize: 15, paddingRight: 44 }}>{s.name}</h2>
-              <p className="aux" style={{ marginTop: 5 }}>{s.label}</p>
+              <h2 style={{ fontSize: 14, paddingRight: 44 }}>{s.name}</h2>
+              <p className="aux" style={{ marginTop: 4 }}>{s.label}</p>
             </div>
           );
         })}
-
-        {/* + 自定义风格 入口卡 */}
-        <div
-          className="sel"
-          onClick={() => setOpen(true)}
-          style={{ display: "grid", placeItems: "center", minHeight: 200, borderStyle: "dashed", cursor: "pointer" }}
-        >
+        <div className="sel" onClick={() => setOpen(true)} style={{ display: "grid", placeItems: "center", minHeight: 200, borderStyle: "dashed" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 30 }}>＋</div>
             <p style={{ fontWeight: 500, marginTop: 6 }}>自定义风格</p>
@@ -590,31 +384,12 @@ function StyleStep({
           </div>
         </div>
       </div>
-
-      <div className="hint" style={{ marginTop: 16 }}>
-        风格包决定<b>草稿基因词</b>与<b>每个后端</b>渲染吃的统一 config（色板/字体）。「推荐」按当前视频类型给出。
-      </div>
-
-      {open ? (
-        <CustomStyleCreator
-          onClose={() => setOpen(false)}
-          onCreated={async (id) => {
-            await onCreated(id);
-            setOpen(false);
-          }}
-        />
-      ) : null}
+      {open ? <CustomStyleCreator onClose={() => setOpen(false)} onCreated={async (id) => { await onCreated(id); setOpen(false); }} /> : null}
     </>
   );
 }
 
-function CustomStyleCreator({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void;
-  onCreated: (id: string) => Promise<void>;
-}) {
+function CustomStyleCreator({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => Promise<void>; }) {
   const [mode, setMode] = useState<CustomStyleMode>("manual");
   const [name, setName] = useState("");
   const [bg, setBg] = useState("#0B0B0F");
@@ -628,69 +403,38 @@ function CustomStyleCreator({
   async function uploadRef(files: FileList | null) {
     if (!files || !files[0]) return;
     setBusy(true);
-    try {
-      const { ref } = await api.uploadLibraryFile(files[0]);
-      setImageRef(ref);
-    } catch {
-      toast("上传失败");
-    }
+    try { const { ref } = await api.uploadLibraryFile(files[0]); setImageRef(ref); } catch { toast("上传失败"); }
     setBusy(false);
   }
-
   async function create() {
     setBusy(true);
     try {
-      const body =
-        mode === "manual"
-          ? { mode, name, bg, fg, accent, font }
-          : mode === "text"
-          ? { mode, name, description: desc }
-          : { mode, name, imageRef };
+      const body = mode === "manual" ? { mode, name, bg, fg, accent, font } : mode === "text" ? { mode, name, description: desc } : { mode, name, imageRef };
       const { style } = await api.createCustomStyle(body);
       await onCreated(style.id);
-    } catch (e) {
-      toast((e as Error).message?.slice(0, 40) || "创建失败");
-      setBusy(false);
-    }
+    } catch (e) { toast((e as Error).message?.slice(0, 40) || "创建失败"); setBusy(false); }
   }
-
-  const canCreate =
-    mode === "manual"
-      ? true
-      : mode === "text"
-      ? desc.trim().length > 0
-      : imageRef.length > 0;
+  const canCreate = mode === "manual" ? true : mode === "text" ? desc.trim().length > 0 : imageRef.length > 0;
 
   return (
-    <div className="card pad fade" style={{ marginTop: 18, background: "#fff" }}>
-      <div className="spaced">
-        <b>自定义风格</b>
-        <button className="btn ghost sm" onClick={onClose}>✕ 关闭</button>
-      </div>
-      <div className="row" style={{ gap: 8, margin: "14px 0" }}>
-        {([
-          ["manual", "手填色板"],
-          ["text", "一句描述"],
-          ["image", "参考图"],
-        ] as [CustomStyleMode, string][]).map(([m, label]) => (
+    <div className="card pad fade" style={{ marginTop: 18 }}>
+      <div className="spaced"><b>自定义风格</b><button className="btn ghost sm" onClick={onClose}>✕ 关闭</button></div>
+      <div className="seg" style={{ margin: "14px 0" }}>
+        {([["manual", "手填色板"], ["text", "一句描述"], ["image", "参考图"]] as [CustomStyleMode, string][]).map(([m, label]) => (
           <span key={m} className={`pill ${mode === m ? "on" : ""}`} onClick={() => setMode(m)}>{label}</span>
         ))}
       </div>
-
       <label className="fld">风格名（可空，自动生成）</label>
       <input className="input" value={name} placeholder="如 冷夜蓝" onChange={(e) => setName(e.target.value)} />
-
       {mode === "manual" ? (
         <div style={{ marginTop: 12 }}>
           <div className="row" style={{ gap: 18, flexWrap: "wrap" }}>
-            {([["背景 bg", bg, setBg], ["文字 fg", fg, setFg], ["点缀 accent", accent, setAccent]] as [string, string, (v: string) => void][]).map(
-              ([lab, val, set]) => (
-                <div key={lab} className="col" style={{ gap: 6 }}>
-                  <label className="fld">{lab}</label>
-                  <input type="color" value={val} onChange={(e) => set(e.target.value)} style={{ width: 54, height: 34, cursor: "pointer" }} />
-                </div>
-              )
-            )}
+            {([["背景 bg", bg, setBg], ["文字 fg", fg, setFg], ["点缀 accent", accent, setAccent]] as [string, string, (v: string) => void][]).map(([lab, val, set]) => (
+              <div key={lab} className="col" style={{ gap: 6 }}>
+                <label className="fld">{lab}</label>
+                <input type="color" value={val} onChange={(e) => set(e.target.value)} style={{ width: 54, height: 34, cursor: "pointer" }} />
+              </div>
+            ))}
           </div>
           <label className="fld" style={{ marginTop: 12 }}>字体倾向（可空）</label>
           <input className="input" value={font} placeholder="如 大字号无衬线 / 衬线精装" onChange={(e) => setFont(e.target.value)} />
@@ -698,18 +442,14 @@ function CustomStyleCreator({
       ) : mode === "text" ? (
         <div style={{ marginTop: 12 }}>
           <label className="fld">一句风格描述</label>
-          <textarea
-            placeholder="例：赛博朋克霓虹夜景，强烈紫粉对比，暗黑背景"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-          />
+          <textarea placeholder="例：赛博朋克霓虹夜景，强烈紫粉对比，暗黑背景" value={desc} onChange={(e) => setDesc(e.target.value)} />
           <p className="aux" style={{ marginTop: 6 }}>交给 agent 提取色板 / 字体 / 风格基因。</p>
         </div>
       ) : (
         <div style={{ marginTop: 12 }}>
-          <label className="card pad" style={{ borderStyle: "dashed", textAlign: "center", cursor: "pointer", display: "block" }}>
-            <div style={{ fontSize: 22 }}>🖼️</div>
-            <p style={{ fontWeight: 500, margin: "6px 0 2px" }}>{imageRef ? "已上传，可重传" : "上传参考图"}</p>
+          <label className="dropzone" style={{ display: "block", cursor: "pointer" }}>
+            <div style={{ fontSize: 22 }}>🖼</div>
+            <p style={{ fontWeight: 500, margin: "6px 0 2px", color: "var(--text-2)" }}>{imageRef ? "已上传，可重传" : "上传参考图"}</p>
             <p className="aux">用 ffmpeg 从图里提主色生成风格</p>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => uploadRef(e.target.files)} />
           </label>
@@ -719,35 +459,22 @@ function CustomStyleCreator({
           ) : null}
         </div>
       )}
-
       <div className="row" style={{ marginTop: 16 }}>
-        <button className="btn" disabled={busy || !canCreate} onClick={create}>
-          {busy ? "生成中…" : "生成并选用"}
-        </button>
+        <button className="btn" disabled={busy || !canCreate} onClick={create}>{busy ? "生成中…" : "生成并选用"}</button>
       </div>
     </div>
   );
 }
 
 /* ============================================================
-   步骤 5 子组件：角色/品牌库选择 + 新建
+   角色/品牌库选择 + 新建 —— 逻辑保持不变
    ============================================================ */
-const ROLE_KIND_LABEL: Record<RoleKind, string> = {
-  brand: "品牌",
-  character: "角色",
-  product: "产品",
-};
+const ROLE_KIND_LABEL: Record<RoleKind, string> = { brand: "品牌", character: "角色", product: "产品" };
 
 function RoleStep({
-  roles,
-  roleRefs,
-  toggleRole,
-  onCreated,
+  roles, roleRefs, toggleRole, onCreated,
 }: {
-  roles: RoleEntry[];
-  roleRefs: string[];
-  toggleRole: (id: string) => void;
-  onCreated: (id: string) => Promise<void>;
+  roles: RoleEntry[]; roleRefs: string[]; toggleRole: (id: string) => void; onCreated: (id: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<RoleKind>("brand");
@@ -756,20 +483,13 @@ function RoleStep({
   const [busy, setBusy] = useState(false);
 
   async function create() {
-    if (!name.trim() || !desc.trim()) {
-      toast("填名称和描述");
-      return;
-    }
+    if (!name.trim() || !desc.trim()) { toast("填名称和描述"); return; }
     setBusy(true);
     try {
       const { role } = await api.createRole({ kind, name: name.trim(), description: desc.trim() });
       await onCreated(role.id);
-      setName("");
-      setDesc("");
-      setOpen(false);
-    } catch {
-      toast("新建失败");
-    }
+      setName(""); setDesc(""); setOpen(false);
+    } catch { toast("新建失败"); }
     setBusy(false);
   }
 
@@ -777,23 +497,17 @@ function RoleStep({
     <>
       <div className="spaced">
         <div>
-          <h2 style={{ fontSize: 16 }}>角色 / 品牌库（可选）</h2>
+          <h2 style={{ fontSize: 15 }}>角色 / 品牌库（可选）</h2>
           <p className="aux" style={{ marginTop: 4 }}>选用的品牌/角色设定会贯穿全流程，保证多镜一致。</p>
         </div>
-        <button className="btn ghost sm" onClick={() => setOpen((v) => !v)}>+ 新建</button>
+        <button className="btn ghost sm" onClick={() => setOpen((v) => !v)}>＋ 新建</button>
       </div>
-
       {roles.length ? (
         <div className="row" style={{ flexWrap: "wrap", gap: 10, marginTop: 14 }}>
           {roles.map((r) => {
             const on = roleRefs.includes(r.id);
             return (
-              <div
-                key={r.id}
-                className={`sel ${on ? "on" : ""}`}
-                onClick={() => toggleRole(r.id)}
-                style={{ padding: "10px 14px", minWidth: 180, maxWidth: 260, cursor: "pointer" }}
-              >
+              <div key={r.id} className={`sel ${on ? "on" : ""}`} onClick={() => toggleRole(r.id)} style={{ padding: "10px 14px", minWidth: 180, maxWidth: 260 }}>
                 <div className="row" style={{ gap: 8 }}>
                   <span className="tag">{ROLE_KIND_LABEL[r.kind]}</span>
                   <b style={{ fontSize: 14 }}>{r.name}</b>
@@ -802,9 +516,7 @@ function RoleStep({
                 <p className="aux" style={{ marginTop: 6 }}>{r.description}</p>
                 {r.palette?.length ? (
                   <div className="row" style={{ gap: 5, marginTop: 8 }}>
-                    {r.palette.map((c, i) => (
-                      <span key={i} style={{ width: 16, height: 16, borderRadius: 4, background: c, border: "1px solid var(--border)" }}></span>
-                    ))}
+                    {r.palette.map((c, i) => (<span key={i} style={{ width: 16, height: 16, borderRadius: 4, background: c, border: "1px solid var(--border)" }} />))}
                   </div>
                 ) : null}
               </div>
@@ -812,12 +524,11 @@ function RoleStep({
           })}
         </div>
       ) : (
-        <p className="aux" style={{ marginTop: 12 }}>还没有角色/品牌条目，点「+ 新建」创建第一个。</p>
+        <p className="aux" style={{ marginTop: 12 }}>还没有角色/品牌条目，点「＋ 新建」创建第一个。</p>
       )}
-
       {open ? (
-        <div className="card pad fade" style={{ marginTop: 16, background: "#fff", maxWidth: 480 }}>
-          <div className="row" style={{ gap: 8, marginBottom: 12 }}>
+        <div className="card pad fade" style={{ marginTop: 16, maxWidth: 480 }}>
+          <div className="seg" style={{ marginBottom: 12 }}>
             {(["brand", "character", "product"] as RoleKind[]).map((k) => (
               <span key={k} className={`pill ${kind === k ? "on" : ""}`} onClick={() => setKind(k)}>{ROLE_KIND_LABEL[k]}</span>
             ))}
