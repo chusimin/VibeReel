@@ -78,6 +78,28 @@
 | 分镜表 renderer 下拉 ↔ visual 联动 | 🟡 | 当前 renderer 仅徽章，真实渲染以 visual 为准；可改成直接编辑 visual.type |
 | @引用可视化编辑（料块拖入概念/分镜） | 🟡 | 现为只读展示 refs；交互式 @mention 待做 |
 
+## 七、暗色重设计（本轮 · 2026-06-15）
+
+按 `design/high-fidelity-ui/01–08` 高保真稿，把前端从「亮色+橙色」整体改为**暗色·极简黑白**，并修复上一轮 UI 审查发现的问题。
+
+| 项 | 状态 | 说明 |
+|---|---|---|
+| 设计语言文档 | ✅ | [design/DESIGN.md](../design/DESIGN.md)（取代旧亮色规范） |
+| 暗色基础设施 | ✅ | `globals.css` 全量重写为暗色 token + 组件类（旧 var 名保留为别名）；`tailwind.config` 语义映射 |
+| 左侧导航 + 壳 | ✅ | `components/Sidebar.tsx` + `AppShell.tsx` + `Status.tsx`（统一状态徽标） |
+| 首页仪表盘 | ✅ | 稿 01：Hero/模板卡/快速开始/最近项目表/概览+存储（真实数据，新增 `/api/stats`） |
+| 新建视频 | ✅ | 稿 02：单页表单 + 右摘要 + 底部步进器；保留多输入/代码包/自定义风格/角色全部能力 |
+| 历史 | ✅ | 稿 07：新建 `/history`（筛选 tab + 表格 + 本周概览 + 最近继续） |
+| 素材库 | ✅ | 稿 08：新建 `/library`（风格+角色网格 + 详情面板 + 上传 + 拖拽区） |
+| 工作流四闸门 | ✅ | 稿 03–06：左竖向步骤栏 + 顶状态条 + 各 gate 暗色化；保留 SSE/gate/edit/nav 逻辑 |
+| 设置/登录 | ✅ | 暗色化；设置接入左导航 + 退出登录 |
+| 验证 | ✅ | `tsc --noEmit` 0 错；`next build` 通过；8 屏逐一截图核对 |
+
+**修复的 UI 审查问题**：状态色（待确认琥珀 ≠ 渲染中蓝）、双重编号、摘要假开关、状态词收敛、对比度。
+**设计稿 vs 后端差异清单**：见 [docs/设计稿与实现差异-mismatches.md](设计稿与实现差异-mismatches.md)（决策口径：以设计稿为准，后端不动；需产品决策项见该文档第二/三节）。
+
 ## 关联
 - PRD 主文档：[docs/prd/00-主文档-PRD.md](prd/00-主文档-PRD.md)
 - 验收清单（目标）：[docs/prd/08-验收清单-acceptance.md](prd/08-验收清单-acceptance.md)
+- 设计语言：[design/DESIGN.md](../design/DESIGN.md)
+- 差异清单：[docs/设计稿与实现差异-mismatches.md](设计稿与实现差异-mismatches.md)
