@@ -11,6 +11,7 @@ import {
   stageLabel,
   fmtRelTime,
   fmtBytes,
+  fileUrl,
   type StatsResp,
 } from "@/app/_ui";
 import type { ProjectSummary } from "@/lib/types";
@@ -20,6 +21,28 @@ const TEMPLATES = [
   { type: "teaching", title: "教学短片", desc: "一步步把怎么做讲清楚", tag: "适合演示 · 教程" },
   { type: "popsci", title: "知识科普", desc: "把概念讲懂、讲出高级感", tag: "适合科普 · 解读" },
 ] as const;
+
+// 模板卡视觉：线性图标（替代空占位框，贴近 v1 的图像感）。
+const TPL_ICON: Record<string, JSX.Element> = {
+  showreel: (
+    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  teaching: (
+    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <path d="M4 6h10M4 12h10M4 18h7" />
+      <circle cx="19" cy="6" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  popsci: (
+    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.6-1 1-1 2H9c0-1-.3-1.4-1-2A6 6 0 0 1 12 3Z" />
+    </svg>
+  ),
+};
 
 function actionFor(statusKey: string): string {
   if (statusKey === "done") return "导出";
@@ -85,7 +108,9 @@ export default function HomePage() {
         <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 28 }}>
           {TEMPLATES.map((t) => (
             <Link key={t.type} href={`/new?type=${t.type}`} className="card hover" style={{ padding: 20 }}>
-              <div className="thumb" style={{ height: 120, marginBottom: 16 }} />
+              <div className="thumb" style={{ height: 120, marginBottom: 16, display: "grid", placeItems: "center", color: "var(--text-3)", background: "radial-gradient(120% 120% at 70% 0%, #16181b, #0c0d0f)" }}>
+                {TPL_ICON[t.type]}
+              </div>
               <h2 style={{ fontSize: 16 }}>{t.title}</h2>
               <p className="aux" style={{ marginTop: 5 }}>{t.desc}</p>
               <p className="dim" style={{ fontSize: 12, marginTop: 12 }}>{t.tag}</p>
@@ -151,7 +176,12 @@ export default function HomePage() {
                         <tr key={p.id} style={{ cursor: "pointer" }} onClick={() => router.push("/projects/" + p.id)}>
                           <td>
                             <div className="row" style={{ gap: 11 }}>
-                              <span className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto" }} />
+                              {p.thumb ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={fileUrl(p.id, p.thumb)} alt="" className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto", objectFit: "cover" }} />
+                              ) : (
+                                <span className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto" }} />
+                              )}
                               <div className="col">
                                 <span className="pri">{p.title}</span>
                                 <span className="dim" style={{ fontSize: 11.5 }}>{p.aspect}</span>

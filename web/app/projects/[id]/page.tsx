@@ -434,37 +434,43 @@ function GateConcept({
   const [sel, setSel] = useState<number | null>(p.chosenConcept);
   return (
     <div className="fade">
-      {/* concept 在最前，回退无意义 → 不显示返回按钮 */}
       <div className="spaced">
         <h2>方向确认</h2>
         <span className="aux">2–3 个创作方向，挑一个（可逐项编辑）</span>
       </div>
-      <div
-        className="grid"
-        style={{ gridTemplateColumns: "repeat(3,1fr)", marginTop: 16 }}
-      >
-        {p.concepts.map((c: Concept, idx: number) => (
-          <ConceptCard
-            key={idx}
-            concept={c}
-            index={idx}
-            selected={sel === idx}
-            onSelect={() => setSel(idx)}
-            edit={edit}
-          />
-        ))}
-      </div>
-      <div className="row" style={{ marginTop: 24 }}>
-        <div style={{ flex: 1 }}></div>
-        <button
-          className="btn"
-          disabled={sel === null}
-          onClick={() =>
-            sel !== null && gate({ gate: "concept", choice: sel })
-          }
-        >
-          用这个方向 →
-        </button>
+      <div className="grid" style={{ gridTemplateColumns: "1fr 300px", alignItems: "start", gap: 24, marginTop: 16 }}>
+        <div className="grid" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
+          {p.concepts.map((c: Concept, idx: number) => (
+            <ConceptCard
+              key={idx}
+              concept={c}
+              index={idx}
+              selected={sel === idx}
+              onSelect={() => setSel(idx)}
+              edit={edit}
+            />
+          ))}
+        </div>
+        {/* 右侧方向摘要（对齐 v1 03 三栏布局） */}
+        <div style={{ position: "sticky", top: 80 }}>
+          <div className="summary">
+            <h3>方向摘要</h3>
+            <div className="kv"><span className="k">类型</span><span className="v">{TYPES[p.videoType].name}</span></div>
+            <div className="kv"><span className="k">风格</span><span className="v">{p.fourPack.styleId}</span></div>
+            <div className="kv"><span className="k">配音</span><span className="v">{p.vo ? "开启" : "关闭"}</span></div>
+            {sel !== null && p.concepts[sel] ? (
+              <>
+                <div className="kv"><span className="k">已选方向</span><span className="v">{p.concepts[sel].title}</span></div>
+                {p.concepts[sel].palette ? <div className="kv"><span className="k">配色</span><span className="v">{p.concepts[sel].palette}</span></div> : null}
+                {p.concepts[sel].pacing ? <div className="kv"><span className="k">节奏</span><span className="v">{p.concepts[sel].pacing}</span></div> : null}
+              </>
+            ) : null}
+          </div>
+          <button className="btn block" style={{ marginTop: 14 }} disabled={sel === null} onClick={() => sel !== null && gate({ gate: "concept", choice: sel })}>
+            确认方向 →
+          </button>
+          {sel === null ? <p className="aux" style={{ marginTop: 10, textAlign: "center" }}>先选一个方向</p> : null}
+        </div>
       </div>
     </div>
   );
@@ -729,6 +735,7 @@ function GateStoryboard({
   nav: () => void;
 }) {
   const [redo, setRedo] = useState<string | null>(null);
+  const totalDur = p.scenes.reduce((a, s) => a + (s.durationSec || 0), 0);
   return (
     <div className="fade">
       <BackBar nav={nav} />
@@ -736,82 +743,49 @@ function GateStoryboard({
         <h2>分镜确认</h2>
         <span className="aux">每行一镜 · 列项可内联编辑</span>
       </div>
-      <div className="banner info" style={{ margin: "14px 0" }}>
-        草稿仅供<b>方向确认</b>，不是正片精确长相。确认后才按各自后端渲正片。
-      </div>
-
-      {/* 表头 */}
-      <div
-        className="row"
-        style={{
-          gap: 12,
-          padding: "0 14px 8px",
-          fontSize: 12.5,
-          color: "var(--text2)",
-          fontWeight: 600,
-        }}
-      >
-        <span style={{ width: 96, flexShrink: 0 }}>草稿</span>
-        <span style={{ width: 34, flexShrink: 0 }}>#</span>
-        <span style={{ width: 150, flexShrink: 0 }}>标题 role</span>
-        <span style={{ flex: 1, minWidth: 140 }}>描述 onScreenText</span>
-        <span style={{ width: 92, flexShrink: 0 }}>时长 s</span>
-        <span style={{ width: 168, flexShrink: 0 }}>镜头类型</span>
-      </div>
-
-      <div className="col" style={{ gap: 10 }}>
-        {p.scenes.map((s) => (
-          <StoryboardRow
-            key={s.index}
-            scene={s}
-            projectId={p.projectId}
-            aspect={p.aspect}
-            edit={edit}
-          />
-        ))}
-      </div>
-
-      {redo !== null ? (
-        <div className="card pad fade" style={{ marginTop: 18, background: "var(--surface-1)" }}>
-          <label className="fld">
-            一句话意见（可空）— agent 会按意见重写分镜并追加一条 revision
-          </label>
-          <textarea
-            placeholder="例：第 1 镜更聚焦痛点；整体节奏再快一点"
-            value={redo}
-            onChange={(e) => setRedo(e.target.value)}
-          />
-          <div className="row" style={{ marginTop: 12 }}>
-            <button
-              className="btn sm"
-              onClick={() =>
-                gate({
-                  gate: "storyboard",
-                  action: "redo",
-                  note: redo || undefined,
-                })
-              }
-            >
-              提交重写
-            </button>
-            <button className="btn ghost sm" onClick={() => setRedo(null)}>
-              取消
-            </button>
+      <div className="grid" style={{ gridTemplateColumns: "1fr 300px", alignItems: "start", gap: 24, marginTop: 14 }}>
+        <div>
+          <div className="banner info" style={{ marginBottom: 14 }}>
+            草稿仅供<b>方向确认</b>，不是正片精确长相。确认后才按各自后端渲正片。
           </div>
+          {/* 表头 */}
+          <div className="row" style={{ gap: 12, padding: "0 14px 8px", fontSize: 12, color: "var(--text-3)", fontWeight: 500 }}>
+            <span style={{ width: 84, flexShrink: 0 }}>草稿</span>
+            <span style={{ width: 28, flexShrink: 0 }}>#</span>
+            <span style={{ width: 120, flexShrink: 0 }}>标题</span>
+            <span style={{ flex: 1, minWidth: 120 }}>描述</span>
+            <span style={{ width: 80, flexShrink: 0 }}>时长 s</span>
+            <span style={{ width: 150, flexShrink: 0 }}>镜头类型</span>
+          </div>
+          <div className="col" style={{ gap: 10 }}>
+            {p.scenes.map((s) => (
+              <StoryboardRow key={s.index} scene={s} projectId={p.projectId} aspect={p.aspect} edit={edit} />
+            ))}
+          </div>
+          {redo !== null ? (
+            <div className="card pad fade" style={{ marginTop: 18 }}>
+              <label className="fld">一句话意见（可空）— agent 会按意见重写分镜并追加一条 revision</label>
+              <textarea placeholder="例：第 1 镜更聚焦痛点；整体节奏再快一点" value={redo} onChange={(e) => setRedo(e.target.value)} />
+              <div className="row" style={{ marginTop: 12 }}>
+                <button className="btn sm" onClick={() => gate({ gate: "storyboard", action: "redo", note: redo || undefined })}>提交重写</button>
+                <button className="btn ghost sm" onClick={() => setRedo(null)}>取消</button>
+              </div>
+            </div>
+          ) : null}
         </div>
-      ) : null}
 
-      <div className="row" style={{ marginTop: 24 }}>
-        <button className="btn ghost" onClick={() => setRedo("")}>
-          打回重做
-        </button>
-        <div style={{ flex: 1 }}></div>
-        <button
-          className="btn"
-          onClick={() => gate({ gate: "storyboard", action: "confirm" })}
-        >
-          确认分镜 → 渲染
-        </button>
+        {/* 右侧分镜摘要 + 操作 */}
+        <div style={{ position: "sticky", top: 80 }}>
+          <div className="summary">
+            <h3>分镜摘要</h3>
+            <div className="kv"><span className="k">镜头数</span><span className="v">{p.scenes.length}</span></div>
+            <div className="kv"><span className="k">预计时长</span><span className="v mono">{totalDur}s</span></div>
+            <div className="kv"><span className="k">风格</span><span className="v">{p.fourPack.styleId}</span></div>
+            <div className="kv"><span className="k">配音</span><span className="v">{p.vo ? "开启" : "关闭"}</span></div>
+          </div>
+          <button className="btn block" style={{ marginTop: 14 }} onClick={() => gate({ gate: "storyboard", action: "confirm" })}>确认分镜 → 渲染</button>
+          <button className="btn ghost block" style={{ marginTop: 10 }} onClick={() => setRedo("")}>打回重做</button>
+        </div>
       </div>
     </div>
   );
@@ -979,6 +953,9 @@ function GateChunks({
   const allReady = N > 0 && generated.length === N && !anyRendering;
 
   const clamp = (i: number) => Math.max(0, Math.min(N - 1, i));
+  const cAwait = scenes.filter((s) => s.status === "await_review").length;
+  const cOk = scenes.filter((s) => s.status === "approved").length;
+  const cPending = scenes.filter((s) => s.status === "pending").length;
 
   return (
     <div className="fade">
@@ -1002,67 +979,49 @@ function GateChunks({
         </div>
       </div>
 
-      <div className="banner info" style={{ margin: "14px 0" }}>
-        {inPreviewPhase ? (
-          <span>
-            先渲<b>前 2 镜</b>给你确认方向：满意就「续渲全部」，其余镜会按各自后端继续生成。
-          </span>
-        ) : (
-          <span>
-            每镜按自己的后端渲染（Remotion / 生成式 / Lottie / 推拉），统一 config 防拼贴感。
-            任意已生成镜可单独「👎 重做这段」。
-          </span>
-        )}
-      </div>
-
-      {/* 视图主体 */}
-      {view === "list" ? (
-        <div className="grid" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
-          {scenes.map((s) => (
-            <ChunkCard
-              key={s.index}
-              scene={s}
-              projectId={p.projectId}
-              aspect={p.aspect}
-              gate={gate}
-            />
-          ))}
+      <div className="grid" style={{ gridTemplateColumns: "1fr 300px", alignItems: "start", gap: 24, marginTop: 14 }}>
+        <div>
+          <div className="banner info" style={{ marginBottom: 14 }}>
+            {inPreviewPhase ? (
+              <span>先渲<b>前 2 镜</b>给你确认方向：满意就「续渲全部」，其余镜会按各自后端继续生成。</span>
+            ) : (
+              <span>每镜按自己的后端渲染（Remotion / 生成式 / Lottie / 推拉），统一 config 防拼贴感。任意已生成镜可单独「👎 重做这段」。</span>
+            )}
+          </div>
+          {view === "list" ? (
+            <div className="grid" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
+              {scenes.map((s) => (
+                <ChunkCard key={s.index} scene={s} projectId={p.projectId} aspect={p.aspect} gate={gate} />
+              ))}
+            </div>
+          ) : (
+            <FullScreenChunks scenes={scenes} projectId={p.projectId} aspect={p.aspect} cur={clamp(cur)} setCur={(i) => setCur(clamp(i))} gate={gate} />
+          )}
         </div>
-      ) : (
-        <FullScreenChunks
-          scenes={scenes}
-          projectId={p.projectId}
-          aspect={p.aspect}
-          cur={clamp(cur)}
-          setCur={(i) => setCur(clamp(i))}
-          gate={gate}
-        />
-      )}
 
-      {/* 主操作条 */}
-      <div className="row" style={{ marginTop: 24 }}>
-        <div style={{ flex: 1 }}></div>
-        {inPreviewPhase ? (
-          <button
-            className="btn"
-            disabled={generated.length < 1}
-            onClick={() => gate({ gate: "chunk", action: "continue" })}
-          >
-            确认前 {Math.min(2, N)} 镜方向 → 续渲全部
-          </button>
-        ) : allReady ? (
-          <button
-            className="btn"
-            onClick={() => gate({ gate: "chunk", action: "assemble" })}
-          >
-            全部满意 → 合成成片
-          </button>
-        ) : (
-          <span className="chip">
-            <span className="spin" style={{ width: 13, height: 13 }}></span>
-            其余镜渲染中…（{generated.length}/{N}）
-          </span>
-        )}
+        {/* 右侧渲染进度 + 主操作 */}
+        <div style={{ position: "sticky", top: 80 }}>
+          <div className="summary">
+            <h3>渲染进度</h3>
+            <div className="kv"><span className="k">已生成</span><span className="v mono">{generated.length}/{N}</span></div>
+            <div className="kv"><span className="k status review"><span className="d" />待确认</span><span className="v">{cAwait}</span></div>
+            <div className="kv"><span className="k status ok"><span className="d" />已通过</span><span className="v">{cOk}</span></div>
+            <div className="kv"><span className="k status pending"><span className="d" />待生成</span><span className="v">{cPending}</span></div>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            {inPreviewPhase ? (
+              <button className="btn block" disabled={generated.length < 1} onClick={() => gate({ gate: "chunk", action: "continue" })}>
+                确认前 {Math.min(2, N)} 镜 → 续渲全部
+              </button>
+            ) : allReady ? (
+              <button className="btn block" onClick={() => gate({ gate: "chunk", action: "assemble" })}>全部满意 → 合成成片</button>
+            ) : (
+              <button className="btn block" disabled>
+                <span className="spin" style={{ width: 13, height: 13 }} />其余镜渲染中（{generated.length}/{N}）
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1327,98 +1286,60 @@ function GateFinal({
         <span className="aux">{p.aspect} 成片</span>
       </div>
 
-      {/* QA 条：以 fourPack.qaRules 的首条作为提示项展示 */}
-      {p.fourPack.qaRules?.length ? (
-        <div className="banner warn" style={{ margin: "14px 0" }}>
-          QA：{p.fourPack.qaRules[0]}（提示项，不阻断下载）。
-        </div>
-      ) : (
-        <div className="banner info" style={{ margin: "14px 0" }}>
-          QA 已通过，可下载成片。
-        </div>
-      )}
-
-      <div style={{ display: "grid", placeItems: "center", margin: "8px 0 22px" }}>
-        <div
-          style={{ maxWidth: narrow ? 300 : 680, width: "100%" }}
-        >
+      <div className="grid" style={{ gridTemplateColumns: "1fr 320px", alignItems: "start", gap: 24, marginTop: 14 }}>
+        {/* 左：成片预览 */}
+        <div>
           {out.mp4 ? (
-            <div
-              className="player"
-              style={{ aspectRatio: ratio(p.aspect), maxHeight: "70vh" }}
-            >
+            <div className="player" style={{ aspectRatio: ratio(p.aspect), maxHeight: "70vh", maxWidth: narrow ? 300 : "100%", margin: narrow ? "0 auto" : undefined }}>
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-              <video
-                src={fileUrl(p.projectId, out.mp4)}
-                controls
-                style={{ width: "100%", height: "100%", objectFit: "contain" }}
-              />
-              <div className="meta">
-                <span>{p.title}</span>
-                <span>{p.aspect}</span>
-              </div>
+              <video src={fileUrl(p.projectId, out.mp4)} controls style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              <div className="meta"><span>{p.title}</span><span>{p.aspect}</span></div>
             </div>
           ) : (
-            <div
-              className="skel"
-              style={{ aspectRatio: ratio(p.aspect), maxHeight: "70vh" }}
-            >
+            <div className="skel" style={{ aspectRatio: ratio(p.aspect), maxHeight: "70vh" }}>
               <span className="lbl muted">成片合成中…</span>
             </div>
           )}
+          {out.mp4 ? (
+            <div className="row" style={{ justifyContent: "center", marginTop: 12 }}>
+              <button className="btn ghost sm" onClick={() => setFs(true)}>⛶ 全屏预览</button>
+            </div>
+          ) : null}
         </div>
-      </div>
 
-      {/* 导出设置（只读复核）+ 输出偏好状态 chip——codex 建议：终检页只读展示 */}
-      <div style={{ maxWidth: 420, margin: "0 auto 18px" }}>
-        <div className="summary">
-          <h3>导出设置</h3>
-          <div className="kv"><span className="k">格式</span><span className="v">MP4</span></div>
-          <div className="kv"><span className="k">分辨率</span><span className="v">1080p</span></div>
-          <div className="kv"><span className="k">画幅</span><span className="v">{p.aspect}</span></div>
-          <div className="kv">
-            <span className="k">配音</span>
-            <span className="v">{p.vo ? "开" : "关"}{p.vo ? <span className="tag" style={{ marginLeft: 8 }}>待生成支持</span> : null}</span>
+        {/* 右：导出设置 + 终检结果 + 下载（对齐 v1 06） */}
+        <div style={{ position: "sticky", top: 80 }}>
+          <div className="summary">
+            <h3>导出设置</h3>
+            <div className="kv"><span className="k">格式</span><span className="v">MP4</span></div>
+            <div className="kv"><span className="k">分辨率</span><span className="v">1080p</span></div>
+            <div className="kv"><span className="k">画幅</span><span className="v">{p.aspect}</span></div>
+            <div className="kv"><span className="k">配音</span><span className="v">{p.vo ? "开" : "关"}{p.vo ? <span className="tag" style={{ marginLeft: 8 }}>待生成支持</span> : null}</span></div>
+            <div className="kv"><span className="k">字幕</span><span className="v">{p.subtitle ? "开" : "关"}{p.subtitle ? <span className="tag" style={{ marginLeft: 8 }}>{out.srt ? "已生成" : "待生成支持"}</span> : null}</span></div>
           </div>
-          <div className="kv">
-            <span className="k">字幕</span>
-            <span className="v">{p.subtitle ? "开" : "关"}{p.subtitle ? <span className="tag" style={{ marginLeft: 8 }}>{out.srt ? "已生成" : "待生成支持"}</span> : null}</span>
-          </div>
-        </div>
-      </div>
 
-      <div
-        className="row"
-        style={{ justifyContent: "center", flexWrap: "wrap", gap: 10 }}
-      >
-        {out.mp4 ? (
-          <button className="btn ghost" onClick={() => setFs(true)}>
-            ⛶ 全屏预览
+          <div className="summary" style={{ marginTop: 14 }}>
+            <h3>终检结果</h3>
+            <div className="kv">
+              <span className="k">文件完整性</span>
+              <span className="v">{out.mp4 ? <Status cls="ok" label="通过" /> : <Status cls="pending" label="待合成" />}</span>
+            </div>
+            {(p.fourPack.qaRules ?? []).slice(0, 4).map((r, i) => (
+              <div className="kv" key={i}>
+                <span className="k" style={{ fontSize: 12, lineHeight: 1.4, paddingRight: 8 }}>{r}</span>
+                <span className="tag" style={{ flex: "0 0 auto" }}>提示</span>
+              </div>
+            ))}
+            <p className="aux" style={{ marginTop: 8 }}>QA 为提示项，不阻断下载。</p>
+          </div>
+
+          <a className="btn block" style={{ marginTop: 14 }} href={downloadUrl(p.projectId, "mp4")}>下载 MP4</a>
+          {out.srt ? <a className="btn ghost block" style={{ marginTop: 10 }} href={downloadUrl(p.projectId, "srt")}>字幕 SRT</a> : null}
+          {out.zip ? <a className="btn ghost block" style={{ marginTop: 10 }} href={downloadUrl(p.projectId, "zip")}>打包 ZIP</a> : null}
+          <button className="btn ghost block" style={{ marginTop: 10 }} disabled={p.stage === "done"} onClick={done}>
+            {p.stage === "done" ? "已完成" : "完成，回到项目列表"}
           </button>
-        ) : null}
-        <a className="btn" href={downloadUrl(p.projectId, "mp4")}>
-          下载 MP4
-        </a>
-        {out.srt ? (
-          <a className="btn ghost" href={downloadUrl(p.projectId, "srt")}>
-            字幕 SRT
-          </a>
-        ) : null}
-        {out.zip ? (
-          <a className="btn ghost" href={downloadUrl(p.projectId, "zip")}>
-            打包 ZIP
-          </a>
-        ) : null}
-      </div>
-
-      <div className="row" style={{ justifyContent: "center", marginTop: 26 }}>
-        <button
-          className="btn ghost"
-          disabled={p.stage === "done"}
-          onClick={done}
-        >
-          {p.stage === "done" ? "已完成" : "完成，回到项目列表"}
-        </button>
+        </div>
       </div>
 
       {/* #10：全屏预览遮罩层 */}

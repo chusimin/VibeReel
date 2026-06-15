@@ -204,7 +204,19 @@ export function saveProject(p: ProjectMeta): void {
 
 export function listProjects(): ProjectSummary[] {
   const idx = readIndex();
-  return [...idx.items].sort((a, b) =>
+  const items = [...idx.items].sort((a, b) =>
     a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
   );
+  // 给列表配首帧缩略图（优先草稿首镜，其次首镜成片帧位）——只读磁盘存在性，便宜。
+  return items.map((it) => {
+    const candidates = ["drafts/scene-1.png", "drafts/scene-0.png"];
+    let thumb: string | undefined;
+    for (const rel of candidates) {
+      if (fs.existsSync(path.join(projDir(it.id), rel))) {
+        thumb = rel;
+        break;
+      }
+    }
+    return { ...it, thumb };
+  });
 }

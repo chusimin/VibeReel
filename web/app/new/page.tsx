@@ -30,6 +30,23 @@ const TYPE_LABEL: Record<VideoType, { name: string; desc: string }> = {
   teaching: { name: "教学短片", desc: "适合演示、操作教学、知识传播" },
   popsci: { name: "知识科普", desc: "适合概念解析、原理科普、信息解读" },
 };
+const TYPE_ICON: Record<VideoType, JSX.Element> = {
+  showreel: (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="3" y="5" width="18" height="14" rx="2" /><path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  teaching: (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M4 6h10M4 12h10M4 18h7" /><circle cx="19" cy="6" r="1.5" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  popsci: (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.6-1 1-1 2H9c0-1-.3-1.4-1-2A6 6 0 0 1 12 3Z" />
+    </svg>
+  ),
+};
 
 // 工作流步进器标签映射（与项目页一致）。
 const RAIL_LABEL: Record<string, string> = {
@@ -239,11 +256,15 @@ function NewProjectInner() {
             <Section title="视频类型">
               <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
                 {(Object.keys(TYPES) as VideoType[]).map((k) => (
-                  <div key={k} className={`sel ${type === k ? "on" : ""}`} onClick={() => pickType(k)}>
+                  <div key={k} className={`sel ${type === k ? "on" : ""}`} onClick={() => pickType(k)} style={{ padding: 16 }}>
                     <span className="check">✓</span>
-                    <div className="thumb" style={{ height: 64 }} />
-                    <h2 style={{ fontSize: 15 }}>{TYPE_LABEL[k].name}</h2>
-                    <p className="aux" style={{ marginTop: 5 }}>{TYPE_LABEL[k].desc}</p>
+                    <div className="row" style={{ gap: 10, alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ width: 34, height: 34, borderRadius: 9, background: "var(--surface-2)", border: "1px solid var(--border)", display: "grid", placeItems: "center", color: "var(--text-2)", flex: "0 0 auto" }}>
+                        {TYPE_ICON[k]}
+                      </span>
+                      <h2 style={{ fontSize: 15 }}>{TYPE_LABEL[k].name}</h2>
+                    </div>
+                    <p className="aux">{TYPE_LABEL[k].desc}</p>
                   </div>
                 ))}
               </div>
@@ -278,12 +299,25 @@ function NewProjectInner() {
             </Section>
 
             <Section title="素材准备" desc="可选——产品截图 / logo / 品牌色 / 角色，传得越全，成片越贴。">
-              <label className="dropzone" style={{ display: "block", cursor: "pointer" }}>
-                <div style={{ fontSize: 22, marginBottom: 6 }}>⬆</div>
-                <p style={{ color: "var(--text-2)", fontWeight: 500 }}>点击上传图片 / logo</p>
-                <p className="aux">支持多选，png / jpg / svg</p>
-                <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => addAssetFiles(e.target.files)} />
-              </label>
+              <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+                <label className="dropzone" style={{ display: "block", cursor: "pointer", padding: 16 }}>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>◆</div>
+                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13.5 }}>Logo</p>
+                  <p className="aux" style={{ fontSize: 12 }}>上传图片 / SVG</p>
+                  <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => addAssetFiles(e.target.files)} />
+                </label>
+                <label className="dropzone" style={{ display: "block", cursor: "pointer", padding: 16 }}>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>▦</div>
+                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13.5 }}>产品截图</p>
+                  <p className="aux" style={{ fontSize: 12 }}>上传图片</p>
+                  <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => addAssetFiles(e.target.files)} />
+                </label>
+                <div className="dropzone" style={{ cursor: "pointer", padding: 16 }} onClick={addColor}>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>◐</div>
+                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13.5 }}>品牌色</p>
+                  <p className="aux" style={{ fontSize: 12 }}>点击添加</p>
+                </div>
+              </div>
               {assetFiles.length ? (
                 <div className="grid" style={{ gridTemplateColumns: "repeat(4,1fr)", marginTop: 14 }}>
                   {assetFiles.map((a, i) => (
@@ -298,8 +332,8 @@ function NewProjectInner() {
                   ))}
                 </div>
               ) : null}
+              {colors.length ? (
               <div className="row" style={{ gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-                <button className="btn ghost sm" onClick={addColor}>＋ 加品牌色</button>
                 {colors.map((c, i) => (
                   <span key={i} className="chip" style={{ gap: 8 }}>
                     <input type="color" value={c.ref} onChange={(e) => setColorAt(i, { ref: e.target.value })} style={{ width: 22, height: 22, border: "none", background: "none", padding: 0, cursor: "pointer" }} />
@@ -308,6 +342,7 @@ function NewProjectInner() {
                   </span>
                 ))}
               </div>
+              ) : null}
 
               <div className="divider" />
               <RoleStep

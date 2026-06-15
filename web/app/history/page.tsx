@@ -10,6 +10,7 @@ import {
   projectStatus,
   stageLabel,
   fmtRelTime,
+  fileUrl,
   type ProjStatusKey,
   type StatsResp,
 } from "@/app/_ui";
@@ -168,10 +169,12 @@ export default function HistoryPage() {
                         >
                           <td>
                             <div className="row" style={{ gap: 11 }}>
-                              <span
-                                className="thumb"
-                                style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto" }}
-                              />
+                              {p.thumb ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={fileUrl(p.id, p.thumb)} alt="" className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto", objectFit: "cover" }} />
+                              ) : (
+                                <span className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto" }} />
+                              )}
                               <div className="col">
                                 <span className="pri">{p.title}</span>
                                 <span className="dim" style={{ fontSize: 11.5 }}>{p.aspect}</span>

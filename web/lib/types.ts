@@ -197,6 +197,7 @@ export interface ProjectSummary {
   aspect: Aspect;
   stage: Stage;
   createdAt: string;
+  thumb?: string; // 首帧缩略图相对路径（草稿/成片）；列表展示用，可空
 }
 
 // ---- API 形状（前后端契约） ----
