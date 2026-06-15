@@ -4,6 +4,7 @@ import { ReactNode, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EnginePill } from "@/components/AppShell";
 import Switch from "@/components/Switch";
+import Cover from "@/components/Cover";
 import {
   api,
   toast,
@@ -64,29 +65,11 @@ function journeyFor(type: VideoType): string[] {
 /* 单页表单分区（标题式，不用①②③避免与底部步进器双重编号——修复审查 #4） */
 function Section({ title, desc, children }: { title: string; desc?: string; children: ReactNode }) {
   return (
-    <section style={{ marginBottom: 30 }}>
-      <h2 style={{ fontSize: 16 }}>{title}</h2>
-      {desc ? <p className="aux" style={{ margin: "4px 0 14px" }}>{desc}</p> : <div style={{ height: 12 }} />}
+    <section style={{ marginBottom: 18 }}>
+      <h2 style={{ fontSize: 15 }}>{title}</h2>
+      {desc ? <p className="aux" style={{ margin: "3px 0 10px" }}>{desc}</p> : <div style={{ height: 8 }} />}
       {children}
     </section>
-  );
-}
-
-function StyleThumb({ s }: { s: StylePack }) {
-  const [err, setErr] = useState(false);
-  const src = s.custom && s.heroImage ? libraryFileUrl(s.heroImage) : `/styles/${s.id}.png`;
-  if (err || (s.custom && !s.heroImage)) {
-    return (
-      <div className="thumb" style={{ background: `linear-gradient(135deg, ${s.bg}, ${s.accent})`, display: "grid", placeItems: "center" }}>
-        <span style={{ color: s.fg, fontSize: 12, background: "rgba(0,0,0,.4)", padding: "2px 10px", borderRadius: 999 }}>
-          {s.custom ? "自定义风格" : "主图待上传"}
-        </span>
-      </div>
-    );
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={s.name} className="thumb" style={{ width: "100%", objectFit: "cover" }} onError={() => setErr(true)} />
   );
 }
 
@@ -212,7 +195,7 @@ function NewProjectInner() {
 
       <div className="page wide fade">
         <h1 style={{ marginBottom: 4 }}>新建视频</h1>
-        <p className="muted" style={{ marginBottom: 26 }}>准备内容、画幅和风格，先生成可确认的方向。</p>
+        <p className="muted" style={{ marginBottom: 18 }}>准备内容、画幅和风格，先生成可确认的方向。</p>
 
         <div className="grid" style={{ gridTemplateColumns: "1fr 320px", alignItems: "start", gap: 28 }}>
           {/* ---------------- 左：表单分区 ---------------- */}
@@ -254,17 +237,13 @@ function NewProjectInner() {
             </Section>
 
             <Section title="视频类型">
-              <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+              <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
                 {(Object.keys(TYPES) as VideoType[]).map((k) => (
-                  <div key={k} className={`sel ${type === k ? "on" : ""}`} onClick={() => pickType(k)} style={{ padding: 16 }}>
+                  <div key={k} className={`sel ${type === k ? "on" : ""}`} onClick={() => pickType(k)} style={{ padding: 12 }}>
                     <span className="check">✓</span>
-                    <div className="row" style={{ gap: 10, alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ width: 34, height: 34, borderRadius: 9, background: "var(--surface-2)", border: "1px solid var(--border)", display: "grid", placeItems: "center", color: "var(--text-2)", flex: "0 0 auto" }}>
-                        {TYPE_ICON[k]}
-                      </span>
-                      <h2 style={{ fontSize: 15 }}>{TYPE_LABEL[k].name}</h2>
-                    </div>
-                    <p className="aux">{TYPE_LABEL[k].desc}</p>
+                    <Cover seed={`type-${k}`} icon={TYPE_ICON[k]} aspect="16/10" rounded={8} style={{ marginBottom: 10 }} />
+                    <h2 style={{ fontSize: 14 }}>{TYPE_LABEL[k].name}</h2>
+                    <p className="aux" style={{ marginTop: 3 }}>{TYPE_LABEL[k].desc}</p>
                   </div>
                 ))}
               </div>
@@ -300,22 +279,22 @@ function NewProjectInner() {
 
             <Section title="素材准备" desc="可选——产品截图 / logo / 品牌色 / 角色，传得越全，成片越贴。">
               <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
-                <label className="dropzone" style={{ display: "block", cursor: "pointer", padding: 16 }}>
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>◆</div>
-                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13.5 }}>Logo</p>
-                  <p className="aux" style={{ fontSize: 12 }}>上传图片 / SVG</p>
+                <label className="dropzone" style={{ display: "block", cursor: "pointer", padding: 12 }}>
+                  <Cover seed="asset-logo" aspect="16/9" rounded={6} icon={<span style={{ fontSize: 18 }}>◆</span>} style={{ marginBottom: 8 }} />
+                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13 }}>Logo</p>
+                  <p className="aux" style={{ fontSize: 11.5 }}>上传图片 / SVG</p>
                   <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => addAssetFiles(e.target.files)} />
                 </label>
-                <label className="dropzone" style={{ display: "block", cursor: "pointer", padding: 16 }}>
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>▦</div>
-                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13.5 }}>产品截图</p>
-                  <p className="aux" style={{ fontSize: 12 }}>上传图片</p>
+                <label className="dropzone" style={{ display: "block", cursor: "pointer", padding: 12 }}>
+                  <Cover seed="asset-shot" aspect="16/9" rounded={6} icon={<span style={{ fontSize: 18 }}>▦</span>} style={{ marginBottom: 8 }} />
+                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13 }}>产品截图</p>
+                  <p className="aux" style={{ fontSize: 11.5 }}>上传图片</p>
                   <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => addAssetFiles(e.target.files)} />
                 </label>
-                <div className="dropzone" style={{ cursor: "pointer", padding: 16 }} onClick={addColor}>
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>◐</div>
-                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13.5 }}>品牌色</p>
-                  <p className="aux" style={{ fontSize: 12 }}>点击添加</p>
+                <div className="dropzone" style={{ cursor: "pointer", padding: 12 }} onClick={addColor}>
+                  <Cover seed="asset-color" aspect="16/9" rounded={6} icon={<span style={{ fontSize: 18 }}>◐</span>} style={{ marginBottom: 8 }} />
+                  <p style={{ color: "var(--text-2)", fontWeight: 500, fontSize: 13 }}>品牌色</p>
+                  <p className="aux" style={{ fontSize: 11.5 }}>点击添加</p>
                 </div>
               </div>
               {assetFiles.length ? (
@@ -400,7 +379,7 @@ function NewProjectInner() {
         </div>
 
         {/* 底部全局步进器（内容准备 = 当前；预览整段旅程） */}
-        <div className="divider" style={{ margin: "32px 0 18px" }} />
+        <div className="divider" style={{ margin: "22px 0 14px" }} />
         <div className="rail">
           {journeyFor(type).map((s, idx, arr) => (
             <span key={s} style={{ display: "contents" }}>
@@ -431,28 +410,32 @@ function StyleStep({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12 }}>
         {allStyles.map((s) => {
           const isReco = reco.includes(s.id);
+          // 内置包用 seed 生成确定性渐变「样片」；自定义风格若有参考图则贴真图。
+          const src = s.custom && s.heroImage ? libraryFileUrl(s.heroImage) : undefined;
           return (
-            <div key={s.id} className={`sel ${style === s.id ? "on" : ""}`} onClick={() => setStyle(s.id)}>
-              {isReco ? <span className="tag reco" style={{ position: "absolute", top: 12, right: 12 }}>推荐</span> : s.custom ? <span className="tag" style={{ position: "absolute", top: 12, right: 12 }}>自定义</span> : null}
-              <StyleThumb s={s} />
-              <div className="row" style={{ gap: 8, margin: "12px 0" }}>
-                {[s.bg, s.fg, s.accent].map((c, i) => (
-                  <span key={i} style={{ width: 22, height: 22, borderRadius: 6, background: c, border: "1px solid var(--border)", display: "inline-block" }} />
-                ))}
-              </div>
-              <h2 style={{ fontSize: 14, paddingRight: 44 }}>{s.name}</h2>
-              <p className="aux" style={{ marginTop: 4 }}>{s.label}</p>
+            <div key={s.id} className={`sel ${style === s.id ? "on" : ""}`} onClick={() => setStyle(s.id)} style={{ padding: 8 }}>
+              <span className="check">✓</span>
+              <Cover seed={s.id} src={src} aspect="16/9" rounded={8}>
+                {isReco ? <span className="cv-badge">推荐</span> : s.custom ? <span className="cv-badge">自定义</span> : null}
+                <span style={{ position: "absolute", zIndex: 5, left: 8, bottom: 8, display: "flex", gap: 4 }}>
+                  {[s.bg, s.fg, s.accent].map((c, i) => (
+                    <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: c, border: "1px solid rgba(255,255,255,.35)", display: "inline-block" }} />
+                  ))}
+                </span>
+              </Cover>
+              <h2 style={{ fontSize: 13, marginTop: 8, paddingRight: 18, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</h2>
+              <p className="aux" style={{ marginTop: 2, fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.label}</p>
             </div>
           );
         })}
-        <div className="sel" onClick={() => setOpen(true)} style={{ display: "grid", placeItems: "center", minHeight: 200, borderStyle: "dashed" }}>
+        <div className="sel" onClick={() => setOpen(true)} style={{ display: "grid", placeItems: "center", borderStyle: "dashed", padding: 8 }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 30 }}>＋</div>
-            <p style={{ fontWeight: 500, marginTop: 6 }}>自定义风格</p>
-            <p className="aux" style={{ marginTop: 2 }}>手填色板 / 一句描述 / 参考图</p>
+            <div style={{ fontSize: 24 }}>＋</div>
+            <p style={{ fontWeight: 500, marginTop: 4, fontSize: 13 }}>自定义风格</p>
+            <p className="aux" style={{ marginTop: 2, fontSize: 11.5 }}>色板 / 描述 / 参考图</p>
           </div>
         </div>
       </div>

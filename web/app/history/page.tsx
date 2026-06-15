@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell, { EnginePill, IconBtn, BellIcon } from "@/components/AppShell";
 import Status from "@/components/Status";
+import Cover from "@/components/Cover";
 import {
   api,
   projectStatus,
@@ -169,12 +170,13 @@ export default function HistoryPage() {
                         >
                           <td>
                             <div className="row" style={{ gap: 11 }}>
-                              {p.thumb ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={fileUrl(p.id, p.thumb)} alt="" className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto", objectFit: "cover" }} />
-                              ) : (
-                                <span className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto" }} />
-                              )}
+                              <Cover
+                                seed={p.id}
+                                src={p.thumb ? fileUrl(p.id, p.thumb) : undefined}
+                                aspect="16/9"
+                                rounded={6}
+                                style={{ width: 52, flex: "0 0 auto" }}
+                              />
                               <div className="col">
                                 <span className="pri">{p.title}</span>
                                 <span className="dim" style={{ fontSize: 11.5 }}>{p.aspect}</span>

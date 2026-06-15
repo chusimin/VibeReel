@@ -4,12 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell, { EnginePill, IconBtn, BellIcon } from "@/components/AppShell";
+import Cover from "@/components/Cover";
 import { api, toast, libraryFileUrl, type StylePack } from "@/app/_ui";
 import type { RoleEntry, RoleKind } from "@/lib/types";
 
 /* ------------------------------------------------------------------
    素材库 / Asset Library —— design/high-fidelity-ui/08-asset-library.png
    暗色 · 极简黑白。全站只有两类全局素材：自定义风格(StylePack) + 角色/品牌库(RoleEntry)。
+   布局：左栏美术化封面网格(Cover) + 右栏常驻详情面板(默认选中首个素材)。
    筛选 tab 对照：风格→风格；RoleEntry.kind brand→品牌，character/product→角色。
    设计-数据缺口（mockup 有、数据无）：项目级截图/视频片段没有全局聚合 feed；
    无删除 API；单素材尺寸/大小/格式/使用次数不在数据模型里。详见末尾汇报。
@@ -42,13 +44,11 @@ function roleFilter(kind: RoleKind): FilterKey {
   return kind === "brand" ? "brand" : "role";
 }
 
-// 角色/品牌的中性缩略图色板（取自该条目自有 palette，属于素材数据本身，可用其色值）。
-function paletteSwatch(palette?: string[]): React.CSSProperties {
-  const p = (palette ?? []).filter(Boolean);
-  if (p.length === 0) return {};
-  if (p.length === 1) return { background: p[0] };
-  const stops = p.slice(0, 3).map((c, i, a) => `${c} ${(i / (a.length - 1)) * 100}%`).join(",");
-  return { background: `linear-gradient(135deg,${stops})` };
+// 创建时间格式化（仅展示素材数据自带的 createdAt，缺省时不渲染该行）。
+function fmtDate(s: string): string {
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default function LibraryPage() {
@@ -113,9 +113,13 @@ export default function LibraryPage() {
 
   const selected = useMemo(() => items.find((it) => it.uid === selUid) ?? null, [items, selUid]);
 
-  // 选中项被筛掉时清空详情（避免右栏指向不可见素材）。
+  // 详情面板常驻：默认选中当前可见的首个素材；选中项被筛掉时回落到首个可见素材。
   useEffect(() => {
-    if (selUid && !shown.some((it) => it.uid === selUid)) setSelUid(null);
+    if (shown.length === 0) {
+      if (selUid) setSelUid(null);
+      return;
+    }
+    if (!selUid || !shown.some((it) => it.uid === selUid)) setSelUid(shown[0].uid);
   }, [shown, selUid]);
 
   /* ---- 上传素材 ---- */
@@ -264,17 +268,17 @@ export default function LibraryPage() {
 
         {err ? <div className="banner err" style={{ marginBottom: 16 }}>{err}</div> : null}
 
-        {/* 主体：网格 + 右侧详情 */}
+        {/* 主体：美术化封面网格 + 右侧常驻详情面板 */}
         <div
           className="grid"
           style={{ gridTemplateColumns: selected ? "1fr 320px" : "1fr", alignItems: "start", gap: 24 }}
         >
           <div>
             {loading ? (
-              <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))" }}>
+              <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))" }}>
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="card" style={{ padding: 14 }}>
-                    <div className="skel" style={{ height: 110, marginBottom: 12 }}>
+                  <div key={i} className="card" style={{ padding: 12 }}>
+                    <div className="skel" style={{ aspectRatio: "16/9", marginBottom: 12 }}>
                       <span className="lbl">&nbsp;</span>
                     </div>
                     <div className="skel" style={{ height: 14, width: "70%", borderRadius: 6 }} />
@@ -298,31 +302,33 @@ export default function LibraryPage() {
               <div className="card">
                 <div className="empty">
                   <div className="ic">▦</div>
-                  <h3>这个分类下还没有素材</h3>
-                  <p>切换到「全部」查看已有素材，或上传新素材。</p>
+                  <h3>该分类暂无素材</h3>
+                  <p>拖入文件或新建 · 也可切换到「全部」查看已有素材。</p>
                 </div>
               </div>
             ) : (
-              <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))" }}>
+              <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))" }}>
                 {shown.map((it) => (
                   <AssetCard
                     key={it.uid}
                     item={it}
                     active={it.uid === selUid}
-                    onClick={() => setSelUid((cur) => (cur === it.uid ? null : it.uid))}
+                    onClick={() => setSelUid(it.uid)}
                   />
                 ))}
               </div>
             )}
           </div>
 
-          {/* 右侧详情面板 */}
+          {/* 右侧常驻详情面板（sticky，默认指向首个素材）*/}
           {selected ? (
-            <DetailPanel
-              item={selected}
-              onClose={() => setSelUid(null)}
-              onDelete={() => toast("当前版本暂不支持删除素材")}
-            />
+            <div style={{ position: "sticky", top: 16 }}>
+              <DetailPanel
+                item={selected}
+                onClose={() => setSelUid(null)}
+                onDelete={() => toast("当前版本暂不支持删除素材")}
+              />
+            </div>
           ) : null}
         </div>
 
@@ -363,6 +369,18 @@ function stylePreview(s: { bg?: string; fg?: string; accent?: string }): React.C
   };
 }
 
+// 取该素材的真实参考图（自定义风格主图 / 角色首张参考图），无则返回 undefined。
+function itemImageUrl(item: LibItem): string | undefined {
+  const ref = item.src === "style" ? item.style.heroImage : item.role.assetRefs?.[0];
+  return ref ? libraryFileUrl(ref) : undefined;
+}
+
+// 该素材自有的色值（风格三色 / 角色 palette）—— 属于素材数据本身。
+function itemPalette(item: LibItem): string[] {
+  const cs = item.src === "style" ? [item.style.bg, item.style.fg, item.style.accent] : item.role.palette ?? [];
+  return cs.filter(Boolean) as string[];
+}
+
 function AssetCard({
   item,
   active,
@@ -372,65 +390,48 @@ function AssetCard({
   active: boolean;
   onClick: () => void;
 }) {
-  const heroRef = item.src === "style" ? item.style.heroImage : item.role.assetRefs?.[0];
+  const src = itemImageUrl(item);
+  const palette = itemPalette(item);
   return (
     <div
       className="card hover"
-      style={{ padding: 14, boxShadow: active ? "0 0 0 1px var(--border-strong)" : undefined }}
+      style={{ padding: 12, boxShadow: active ? "0 0 0 1px var(--border-strong)" : undefined }}
       onClick={onClick}
     >
-      {item.src === "style" ? (
-        <div className="thumb" style={{ ...stylePreview(item.style), height: 110, marginBottom: 12, position: "relative" }}>
-          {heroRef ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={libraryFileUrl(heroRef)}
-              alt=""
-              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }}
-            />
-          ) : (
-            <Swatches colors={[item.style.bg, item.style.fg, item.style.accent]} />
-          )}
-        </div>
-      ) : (
-        <div
-          className="thumb"
-          style={{ height: 110, marginBottom: 12, position: "relative", ...paletteSwatch(item.role.palette) }}
-        >
-          {heroRef ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={libraryFileUrl(heroRef)}
-              alt=""
-              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }}
-            />
-          ) : null}
-        </div>
-      )}
-      <div className="pri" style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-        {item.name}
-      </div>
-      <div className="row" style={{ gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-        <span className="tag">{item.kind}</span>
+      <Cover
+        seed={item.src === "style" ? item.style.id : item.role.id}
+        src={src}
+        aspect="16/9"
+        rounded={10}
+        hoverPop
+        caption={item.name}
+        right={<span className="tag" style={{ background: "rgba(0,0,0,.45)", color: "#fff", border: "1px solid rgba(255,255,255,.14)" }}>{item.kind}</span>}
+      >
+        {/* 无真实图时，把素材自有色值作为底部小色块叠加（真实数据，非杜撰）*/}
+        {!src && palette.length ? <Swatches colors={palette} /> : null}
+      </Cover>
+      <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: "wrap" }}>
         {item.src === "style" && item.style.custom ? <span className="tag">自定义</span> : null}
-        {item.src === "role" && (item.role.assetRefs?.length ?? 0) > 0 ? (
-          <span className="tag">{item.role.assetRefs!.length} 图</span>
+        {item.src === "style" && !item.style.custom ? <span className="tag">内置</span> : null}
+        {item.src === "role" ? (
+          <span className="tag">{item.role.assetRefs?.length ?? 0} 图</span>
         ) : null}
+        {palette.length ? <span className="tag">{palette.length} 色</span> : null}
       </div>
     </div>
   );
 }
 
-// 风格三色色块（在缩略图右下角小条展示该风格自有色值）。
+// 素材自有色值小条（无真实图时，叠在封面左下角展示该素材真实色板）。
 function Swatches({ colors }: { colors: (string | undefined)[] }) {
   const cs = colors.filter(Boolean) as string[];
   if (cs.length === 0) return null;
   return (
-    <div style={{ position: "absolute", left: 10, bottom: 10, display: "flex", gap: 6 }}>
-      {cs.map((c, i) => (
+    <div style={{ position: "absolute", zIndex: 5, left: 11, bottom: 36, display: "flex", gap: 6 }}>
+      {cs.slice(0, 4).map((c, i) => (
         <span
           key={i}
-          style={{ width: 16, height: 16, borderRadius: 5, background: c, border: "1px solid rgba(255,255,255,.14)" }}
+          style={{ width: 16, height: 16, borderRadius: 5, background: c, border: "1px solid rgba(255,255,255,.22)" }}
         />
       ))}
     </div>
@@ -448,9 +449,9 @@ function DetailPanel({
 }) {
   const isStyle = item.src === "style";
   const heroRef = isStyle ? item.style.heroImage : item.role.assetRefs?.[0];
-  const palette = isStyle
-    ? ([item.style.bg, item.style.fg, item.style.accent].filter(Boolean) as string[])
-    : item.role.palette ?? [];
+  const src = heroRef ? libraryFileUrl(heroRef) : undefined;
+  const palette = itemPalette(item);
+  const createdAt = isStyle ? item.style.createdAt : item.role.createdAt;
 
   return (
     <div className="summary">
@@ -461,26 +462,17 @@ function DetailPanel({
         </span>
       </div>
 
-      {/* 预览 */}
-      <div
-        className="thumb"
-        style={{
-          height: 150,
-          marginBottom: 16,
-          position: "relative",
-          ...(isStyle ? stylePreview(item.style) : paletteSwatch(item.role.palette)),
-        }}
-      >
-        {heroRef ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={libraryFileUrl(heroRef)}
-            alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }}
-          />
-        ) : isStyle ? (
-          <Swatches colors={[item.style.bg, item.style.fg, item.style.accent]} />
-        ) : null}
+      {/* 大封面预览（与网格同一 Cover，有真图叠真图，无图用确定性渐变 + 真实色板）*/}
+      <div style={{ marginBottom: 16 }}>
+        <Cover
+          seed={isStyle ? item.style.id : item.role.id}
+          src={src}
+          aspect="16/9"
+          rounded={12}
+          badge={item.kind}
+        >
+          {!src && palette.length ? <Swatches colors={palette} /> : null}
+        </Cover>
       </div>
 
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>{item.name}</div>
@@ -524,6 +516,13 @@ function DetailPanel({
         </>
       )}
 
+      {createdAt ? (
+        <div className="kv">
+          <span className="k">创建于</span>
+          <span className="v">{fmtDate(createdAt)}</span>
+        </div>
+      ) : null}
+
       {/* 配色 */}
       {palette.length ? (
         <div style={{ padding: "12px 0 4px" }}>
@@ -556,11 +555,11 @@ function DetailPanel({
           className="btn block"
           href={isStyle ? `/new?styleId=${encodeURIComponent(item.style.id)}` : `/new?role=${encodeURIComponent(item.role.id)}`}
         >
-          用于新视频
+          应用到新项目
         </Link>
-        {heroRef ? (
-          <a className="btn ghost block" href={libraryFileUrl(heroRef)} target="_blank" rel="noreferrer" download>
-            下载
+        {src ? (
+          <a className="btn ghost block" href={src} target="_blank" rel="noreferrer" download>
+            下载参考图
           </a>
         ) : null}
         <button className="btn danger block" onClick={onDelete}>

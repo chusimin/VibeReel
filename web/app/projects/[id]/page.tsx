@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { EnginePill } from "@/components/AppShell";
 import Status from "@/components/Status";
+import Cover from "@/components/Cover";
 import {
   api,
   toast,
@@ -93,6 +94,198 @@ function RefsChips({ refs }: { refs?: string[] }) {
           @{r}
         </span>
       ))}
+    </div>
+  );
+}
+
+/* ---------- 装饰波形条（时间线观感，由 seed 稳定生成，非随机） ---------- */
+function Waveform({
+  seed = "vr",
+  bars = 64,
+  muted = false,
+}: {
+  seed?: string;
+  bars?: number;
+  muted?: boolean;
+}) {
+  let s = 7;
+  for (let i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) % 9973;
+  const arr = Array.from({ length: bars }, (_, i) => {
+    const v =
+      Math.abs(Math.sin(i * 0.5 + s * 0.013)) * 0.7 +
+      Math.abs(Math.sin(i * 1.7 + s * 0.07)) * 0.3;
+    return 16 + Math.round(v * 84);
+  });
+  return (
+    <div className={`waveform ${muted ? "muted" : ""}`} aria-hidden>
+      {arr.map((p, i) => (
+        <i key={i} style={{ height: `${p}%` }} />
+      ))}
+    </div>
+  );
+}
+
+/* ---------- 胶片缩略条（分镜/分段导航：点选切换中央大预览） ---------- */
+function Filmstrip({
+  scenes,
+  projectId,
+  aspect,
+  sel,
+  onSel,
+  withStatus = false,
+}: {
+  scenes: SceneMeta[];
+  projectId: string;
+  aspect: ProjectMeta["aspect"];
+  sel: number;
+  onSel: (i: number) => void;
+  withStatus?: boolean;
+}) {
+  const ar = ratio(aspect);
+  return (
+    <div className="film">
+      {scenes.map((s, i) => {
+        const ss = SCENE_STATUS[s.status] ?? SCENE_STATUS.pending;
+        return (
+          <div
+            key={s.index}
+            className={`cell ${i === sel ? "on" : ""}`}
+            onClick={() => onSel(i)}
+          >
+            <div className="fr">
+              <Cover
+                seed={`${projectId}-${s.index}`}
+                src={s.draftImage ? fileUrl(projectId, s.draftImage) : undefined}
+                aspect={ar}
+                rounded={8}
+                badge={`#${s.index}`}
+                play={Boolean(s.mp4)}
+              />
+            </div>
+            <div className="cap">
+              {withStatus ? (
+                <span className={`status ${ss.cls}`} style={{ gap: 0 }}>
+                  <span className="d" />
+                </span>
+              ) : null}
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                {s.role}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------- 分段大预览舞台：有 mp4 → 播放器；否则状态化封面 ---------- */
+function SegStage({
+  scene: s,
+  projectId,
+  aspect,
+}: {
+  scene: SceneMeta;
+  projectId: string;
+  aspect: ProjectMeta["aspect"];
+}) {
+  const ar = ratio(aspect);
+  const b = RB[s.renderer];
+  const narrow = aspect === "9:16";
+  const wrap: React.CSSProperties = {
+    maxWidth: narrow ? 320 : 760,
+    margin: "0 auto",
+    width: "100%",
+  };
+  if (s.mp4) {
+    return (
+      <div style={wrap}>
+        <div className="player" style={{ aspectRatio: ar }}>
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video
+            src={fileUrl(projectId, s.mp4)}
+            controls
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          <div className="meta">
+            <span>
+              #{s.index} {s.role} · {s.durationSec}s
+            </span>
+            <span className={`tag ${b.cls}`}>{b.name}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  const rendering = s.status === "rendering" || s.status === "redo";
+  return (
+    <div style={wrap}>
+      <Cover
+        seed={`${projectId}-${s.index}`}
+        src={s.draftImage ? fileUrl(projectId, s.draftImage) : undefined}
+        aspect={ar}
+        rounded={14}
+        badge={rendering ? `${b.name} 渲染中…` : `待生成 · ${b.name}`}
+        caption={`#${s.index} ${s.role}`}
+        right={`${s.durationSec}s`}
+      >
+        {rendering ? (
+          <span
+            style={{
+              position: "absolute",
+              zIndex: 6,
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%,-50%)",
+            }}
+          >
+            <span className="spin" style={{ width: 26, height: 26 }} />
+          </span>
+        ) : null}
+      </Cover>
+    </div>
+  );
+}
+
+/* ---------- 选中镜详情卡（右栏：序号/标题/时长/镜头类型/引用料块） ---------- */
+function SceneDetail({ scene: s }: { scene: SceneMeta }) {
+  const b = RB[s.renderer];
+  const ss = SCENE_STATUS[s.status] ?? SCENE_STATUS.pending;
+  return (
+    <div className="summary">
+      <div className="spaced" style={{ marginBottom: 12 }}>
+        <h3 style={{ margin: 0 }}>
+          镜头 #{s.index}
+        </h3>
+        <Status cls={ss.cls} label={ss.label} ring={s.status === "rendering"} />
+      </div>
+      <div className="kv">
+        <span className="k">标题</span>
+        <span className="v">{s.role}</span>
+      </div>
+      <div className="kv">
+        <span className="k">时长</span>
+        <span className="v mono">{s.durationSec}s</span>
+      </div>
+      <div className="kv">
+        <span className="k">镜头类型</span>
+        <span className="v">{b.name}</span>
+      </div>
+      {s.onScreenText ? (
+        <div className="kv" style={{ alignItems: "flex-start" }}>
+          <span className="k">画面字</span>
+          <span className="v" style={{ textAlign: "right", fontWeight: 400 }}>
+            {s.onScreenText}
+          </span>
+        </div>
+      ) : null}
+      {s.rev ? (
+        <div className="kv">
+          <span className="k">修订</span>
+          <span className="v">已改 {s.rev} 版</span>
+        </div>
+      ) : null}
+      <RefsChips refs={s.refs} />
     </div>
   );
 }
@@ -419,7 +612,41 @@ function ProgressPanel({
   );
 }
 
-/* ---------- 闸门① 选方向（#7：展示 look/palette/pacing + 逐项可改） ---------- */
+/* ---------- 小图标（方向封面 / 来源素材） ---------- */
+const DIR_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <circle cx="12" cy="12" r="9" />
+    <path d="m9.5 14.5 1.4-4.6 4.6-1.4-1.4 4.6z" fill="currentColor" stroke="none" />
+  </svg>
+);
+function InputIcon({ kind }: { kind: string }) {
+  if (kind === "url")
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <path d="M10 14a4 4 0 0 0 5.66 0l2.5-2.5a4 4 0 1 0-5.66-5.66L11 7.3" />
+        <path d="M14 10a4 4 0 0 0-5.66 0l-2.5 2.5a4 4 0 1 0 5.66 5.66L13 16.7" />
+      </svg>
+    );
+  if (kind === "idea")
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.6-1 1-1 2H9c0-1-.3-1.4-1-2A6 6 0 0 1 12 3Z" />
+      </svg>
+    );
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <path d="m9 9-3 3 3 3M15 9l3 3-3 3" />
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+    </svg>
+  );
+}
+const INPUT_LABEL: Record<string, string> = {
+  url: "链接",
+  idea: "想法",
+  code: "代码包",
+};
+
+/* ---------- 闸门① 选方向（preview-centric：方向封面 + look/palette/pacing + 来源素材） ---------- */
 function GateConcept({
   project: p,
   gate,
@@ -435,22 +662,50 @@ function GateConcept({
   return (
     <div className="fade">
       <div className="spaced">
-        <h2>方向确认</h2>
+        <h2>选择一个创作方向</h2>
         <span className="aux">2–3 个创作方向，挑一个（可逐项编辑）</span>
       </div>
       <div className="grid" style={{ gridTemplateColumns: "1fr 300px", alignItems: "start", gap: 24, marginTop: 16 }}>
-        <div className="grid" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
-          {p.concepts.map((c: Concept, idx: number) => (
-            <ConceptCard
-              key={idx}
-              concept={c}
-              index={idx}
-              selected={sel === idx}
-              onSelect={() => setSel(idx)}
-              edit={edit}
-            />
-          ))}
+        {/* 左：方向大卡 + 来源素材条 */}
+        <div>
+          <div className="grid" style={{ gridTemplateColumns: p.concepts.length >= 3 ? "repeat(3,1fr)" : "repeat(2,1fr)" }}>
+            {p.concepts.map((c: Concept, idx: number) => (
+              <ConceptCard
+                key={idx}
+                concept={c}
+                index={idx}
+                projectId={p.projectId}
+                selected={sel === idx}
+                onSelect={() => setSel(idx)}
+                edit={edit}
+              />
+            ))}
+          </div>
+
+          {/* 来源素材条（对齐 v1 03 底部） */}
+          {p.inputs && p.inputs.length > 0 ? (
+            <div style={{ marginTop: 22 }}>
+              <div className="spaced" style={{ marginBottom: 10 }}>
+                <h3 style={{ fontSize: 14 }}>来源素材</h3>
+                <span className="aux">这些方向基于以下输入</span>
+              </div>
+              <div className="film">
+                {p.inputs.map((it) => (
+                  <div key={it.id} className="cell" style={{ cursor: "default", width: 132 }}>
+                    <div className="fr">
+                      <Cover seed={it.id} aspect="16/9" rounded={8} icon={<InputIcon kind={it.kind} />} />
+                    </div>
+                    <div className="cap">
+                      <span className="tag" style={{ fontSize: 10.5 }}>{INPUT_LABEL[it.kind] ?? it.kind}</span>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{it.label || it.value}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
+
         {/* 右侧方向摘要（对齐 v1 03 三栏布局） */}
         <div style={{ position: "sticky", top: 80 }}>
           <div className="summary">
@@ -479,12 +734,14 @@ function GateConcept({
 function ConceptCard({
   concept: c,
   index,
+  projectId,
   selected,
   onSelect,
   edit,
 }: {
   concept: Concept;
   index: number;
+  projectId: string;
   selected: boolean;
   onSelect: () => void;
   edit: (b: EditBody) => void;
@@ -577,7 +834,18 @@ function ConceptCard({
     <div
       className={`sel ${selected ? "on" : ""}`}
       onClick={onSelect}
+      style={{ padding: 0, overflow: "hidden" }}
     >
+      <Cover
+        seed={`${projectId}-concept-${index}`}
+        aspect="16/10"
+        rounded={0}
+        icon={DIR_ICON}
+        play
+        hoverPop
+        badge={`方向 ${String.fromCharCode(65 + index)}`}
+      />
+      <div style={{ padding: 18 }}>
       <div className="spaced">
         <h2 style={{ fontSize: 16 }}>{c.title}</h2>
         {selected ? <span className="tag bk-kenburns">已选</span> : null}
@@ -624,6 +892,7 @@ function ConceptCard({
         <button className="btn ghost sm" onClick={startEdit}>
           编辑
         </button>
+      </div>
       </div>
     </div>
   );
@@ -722,7 +991,7 @@ function GateScript({
   );
 }
 
-/* ---------- 闸门② 确认分镜（#8：横排表格 + 逐项可改） ---------- */
+/* ---------- 闸门② 确认分镜（preview-centric：中央大草稿 + 波形 + 胶片条 + 右详情 + 逐镜表） ---------- */
 function GateStoryboard({
   project: p,
   gate,
@@ -735,33 +1004,60 @@ function GateStoryboard({
   nav: () => void;
 }) {
   const [redo, setRedo] = useState<string | null>(null);
-  const totalDur = p.scenes.reduce((a, s) => a + (s.durationSec || 0), 0);
+  const [sel, setSel] = useState(0);
+  const scenes = p.scenes;
+  const totalDur = scenes.reduce((a, s) => a + (s.durationSec || 0), 0);
+  const cur = Math.max(0, Math.min(scenes.length - 1, sel));
+  const s = scenes[cur];
+  const narrow = p.aspect === "9:16";
+
   return (
     <div className="fade">
       <BackBar nav={nav} />
       <div className="spaced">
         <h2>分镜确认</h2>
-        <span className="aux">每行一镜 · 列项可内联编辑</span>
+        <span className="aux">草稿仅供方向确认 · 点胶片切换 · 下方逐镜可改</span>
       </div>
-      <div className="grid" style={{ gridTemplateColumns: "1fr 300px", alignItems: "start", gap: 24, marginTop: 14 }}>
+
+      <div className="grid" style={{ gridTemplateColumns: "1fr 320px", alignItems: "start", gap: 24, marginTop: 14 }}>
+        {/* 左：中央大草稿 + 波形 + 胶片条 + 逐镜表 */}
         <div>
-          <div className="banner info" style={{ marginBottom: 14 }}>
+          {/* 中央影院位 */}
+          <div className="stage">
+            {s ? (
+              <Cover
+                seed={`${p.projectId}-${s.index}`}
+                src={s.draftImage ? fileUrl(p.projectId, s.draftImage) : undefined}
+                aspect={ratio(p.aspect)}
+                rounded={0}
+                badge="草稿"
+                caption={`#${s.index} ${s.role}`}
+                right={`${s.durationSec}s · ${RB[s.renderer].name}`}
+                play
+                style={{ maxWidth: narrow ? 360 : "100%", margin: "0 auto" }}
+              />
+            ) : null}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Waveform seed={`${p.projectId}-sb-${cur}`} muted />
+          </div>
+          <Filmstrip scenes={scenes} projectId={p.projectId} aspect={p.aspect} sel={cur} onSel={setSel} />
+
+          <div className="banner info" style={{ margin: "8px 0 14px" }}>
             草稿仅供<b>方向确认</b>，不是正片精确长相。确认后才按各自后端渲正片。
           </div>
-          {/* 表头 */}
-          <div className="row" style={{ gap: 12, padding: "0 14px 8px", fontSize: 12, color: "var(--text-3)", fontWeight: 500 }}>
-            <span style={{ width: 84, flexShrink: 0 }}>草稿</span>
-            <span style={{ width: 28, flexShrink: 0 }}>#</span>
-            <span style={{ width: 120, flexShrink: 0 }}>标题</span>
-            <span style={{ flex: 1, minWidth: 120 }}>描述</span>
-            <span style={{ width: 80, flexShrink: 0 }}>时长 s</span>
-            <span style={{ width: 150, flexShrink: 0 }}>镜头类型</span>
+
+          {/* 逐镜微调（保留内联编辑能力） */}
+          <div className="spaced" style={{ margin: "4px 0 10px" }}>
+            <h3 style={{ fontSize: 14 }}>逐镜微调</h3>
+            <span className="aux">每行一镜 · 列项可内联编辑</span>
           </div>
           <div className="col" style={{ gap: 10 }}>
-            {p.scenes.map((s) => (
-              <StoryboardRow key={s.index} scene={s} projectId={p.projectId} aspect={p.aspect} edit={edit} />
+            {scenes.map((sc) => (
+              <StoryboardRow key={sc.index} scene={sc} projectId={p.projectId} aspect={p.aspect} edit={edit} />
             ))}
           </div>
+
           {redo !== null ? (
             <div className="card pad fade" style={{ marginTop: 18 }}>
               <label className="fld">一句话意见（可空）— agent 会按意见重写分镜并追加一条 revision</label>
@@ -774,17 +1070,18 @@ function GateStoryboard({
           ) : null}
         </div>
 
-        {/* 右侧分镜摘要 + 操作 */}
-        <div style={{ position: "sticky", top: 80 }}>
+        {/* 右：选中镜详情 + 分镜摘要 + 操作 */}
+        <div className="col" style={{ position: "sticky", top: 80, gap: 14 }}>
+          {s ? <SceneDetail scene={s} /> : null}
           <div className="summary">
             <h3>分镜摘要</h3>
-            <div className="kv"><span className="k">镜头数</span><span className="v">{p.scenes.length}</span></div>
+            <div className="kv"><span className="k">镜头数</span><span className="v">{scenes.length}</span></div>
             <div className="kv"><span className="k">预计时长</span><span className="v mono">{totalDur}s</span></div>
             <div className="kv"><span className="k">风格</span><span className="v">{p.fourPack.styleId}</span></div>
             <div className="kv"><span className="k">配音</span><span className="v">{p.vo ? "开启" : "关闭"}</span></div>
           </div>
-          <button className="btn block" style={{ marginTop: 14 }} onClick={() => gate({ gate: "storyboard", action: "confirm" })}>确认分镜 → 渲染</button>
-          <button className="btn ghost block" style={{ marginTop: 10 }} onClick={() => setRedo("")}>打回重做</button>
+          <button className="btn block" onClick={() => gate({ gate: "storyboard", action: "confirm" })}>确认分镜 → 渲染</button>
+          <button className="btn ghost block" onClick={() => setRedo("")}>打回重做</button>
         </div>
       </div>
     </div>
@@ -932,75 +1229,59 @@ function GateChunks({
   gate: (b: GateBody) => void;
   nav: () => void;
 }) {
-  const [view, setView] = useState<"list" | "full">("list");
-  const [cur, setCur] = useState(0); // 全屏视图当前镜索引（纯前端状态）
-
   const scenes = p.scenes;
   const N = scenes.length;
+  const [sel, setSel] = useState(0);
+  const cur = Math.max(0, Math.min(N - 1, sel));
+  const s = scenes[cur];
 
   // 一镜是否「已生成」（有 mp4，可预览/可重做）。
-  const hasMedia = (s: SceneMeta) => Boolean(s.mp4);
+  const hasMedia = (x: SceneMeta) => Boolean(x.mp4);
   // 一镜是否「待生成」占位（还没出 mp4 且未在渲染）。
-  const isPending = (s: SceneMeta) => !s.mp4 && s.status === "pending";
+  const isPending = (x: SceneMeta) => !x.mp4 && x.status === "pending";
 
   const generated = scenes.filter(hasMedia);
   const anyPending = scenes.some(isPending);
   // 阶段判定：仍有「待生成」的镜 → 处于「前 2 镜确认」阶段。
   const inPreviewPhase = anyPending;
   // 是否还有镜在渲染中（未全部出片）。
-  const anyRendering = scenes.some((s) => s.status === "rendering");
+  const anyRendering = scenes.some((x) => x.status === "rendering");
   // 全部已生成且无待生成/无渲染中 → 可合成。
   const allReady = N > 0 && generated.length === N && !anyRendering;
 
-  const clamp = (i: number) => Math.max(0, Math.min(N - 1, i));
-  const cAwait = scenes.filter((s) => s.status === "await_review").length;
-  const cOk = scenes.filter((s) => s.status === "approved").length;
-  const cPending = scenes.filter((s) => s.status === "pending").length;
+  const cAwait = scenes.filter((x) => x.status === "await_review").length;
+  const cOk = scenes.filter((x) => x.status === "approved").length;
+  const cPending = scenes.filter((x) => x.status === "pending").length;
 
   return (
     <div className="fade">
       <BackBar nav={nav} />
       <div className="spaced">
         <h2>分段预览</h2>
-        <div className="row" style={{ gap: 8 }}>
-          {/* 视图模式切换 */}
-          <span
-            className={`pill ${view === "list" ? "on" : ""}`}
-            onClick={() => setView("list")}
-          >
-            列表
-          </span>
-          <span
-            className={`pill ${view === "full" ? "on" : ""}`}
-            onClick={() => setView("full")}
-          >
-            全屏翻页
-          </span>
-        </div>
+        <span className="aux">每镜按各自后端渲染 · 点胶片切换 · 可单独重做</span>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "1fr 300px", alignItems: "start", gap: 24, marginTop: 14 }}>
+      <div className="grid" style={{ gridTemplateColumns: "1fr 320px", alignItems: "start", gap: 24, marginTop: 14 }}>
+        {/* 左：中央大预览 + 波形 + 胶片条 */}
         <div>
           <div className="banner info" style={{ marginBottom: 14 }}>
             {inPreviewPhase ? (
               <span>先渲<b>前 2 镜</b>给你确认方向：满意就「续渲全部」，其余镜会按各自后端继续生成。</span>
             ) : (
-              <span>每镜按自己的后端渲染（Remotion / 生成式 / Lottie / 推拉），统一 config 防拼贴感。任意已生成镜可单独「👎 重做这段」。</span>
+              <span>每镜按自己的后端渲染（Remotion / 生成式 / Lottie / 推拉），统一 config 防拼贴感。任意已生成镜可单独重做。</span>
             )}
           </div>
-          {view === "list" ? (
-            <div className="grid" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
-              {scenes.map((s) => (
-                <ChunkCard key={s.index} scene={s} projectId={p.projectId} aspect={p.aspect} gate={gate} />
-              ))}
-            </div>
-          ) : (
-            <FullScreenChunks scenes={scenes} projectId={p.projectId} aspect={p.aspect} cur={clamp(cur)} setCur={(i) => setCur(clamp(i))} gate={gate} />
-          )}
+          {s ? <SegStage scene={s} projectId={p.projectId} aspect={p.aspect} /> : null}
+          <div style={{ marginTop: 12 }}>
+            <Waveform seed={`${p.projectId}-seg-${cur}`} muted={!s || !s.mp4} />
+          </div>
+          <Filmstrip scenes={scenes} projectId={p.projectId} aspect={p.aspect} sel={cur} onSel={setSel} withStatus />
         </div>
 
-        {/* 右侧渲染进度 + 主操作 */}
-        <div style={{ position: "sticky", top: 80 }}>
+        {/* 右：选中镜详情 + 单镜重做 + 渲染进度 + 主操作 */}
+        <div className="col" style={{ position: "sticky", top: 80, gap: 14 }}>
+          {s ? <SceneDetail scene={s} /> : null}
+          {s ? <RedoControl scene={s} gate={gate} /> : null}
           <div className="summary">
             <h3>渲染进度</h3>
             <div className="kv"><span className="k">已生成</span><span className="v mono">{generated.length}/{N}</span></div>
@@ -1008,7 +1289,7 @@ function GateChunks({
             <div className="kv"><span className="k status ok"><span className="d" />已通过</span><span className="v">{cOk}</span></div>
             <div className="kv"><span className="k status pending"><span className="d" />待生成</span><span className="v">{cPending}</span></div>
           </div>
-          <div style={{ marginTop: 14 }}>
+          <div>
             {inPreviewPhase ? (
               <button className="btn block" disabled={generated.length < 1} onClick={() => gate({ gate: "chunk", action: "continue" })}>
                 确认前 {Math.min(2, N)} 镜 → 续渲全部
@@ -1023,50 +1304,6 @@ function GateChunks({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* 媒体块：approved/await_review 且有 mp4 → 播放器；rendering → 渲染中 skel；pending → 待生成占位。*/
-function ChunkMedia({
-  scene: s,
-  projectId,
-  ar,
-}: {
-  scene: SceneMeta;
-  projectId: string;
-  ar: string;
-}) {
-  const b = RB[s.renderer];
-  if (s.mp4) {
-    return (
-      <div className="player" style={{ aspectRatio: ar }}>
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-        <video
-          src={fileUrl(projectId, s.mp4)}
-          controls
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
-        <div className="meta">
-          <span>
-            #{s.index} {s.role} · {s.durationSec}s
-          </span>
-          <span className={`tag ${b.cls}`}>{b.name}</span>
-        </div>
-      </div>
-    );
-  }
-  if (s.status === "rendering" || s.status === "redo") {
-    return (
-      <div className="skel" style={{ aspectRatio: ar }}>
-        <span className="lbl">{b.name} 渲染中…</span>
-      </div>
-    );
-  }
-  // pending：待生成占位（#9 文案）。
-  return (
-    <div className="skel" style={{ aspectRatio: ar, background: "var(--surface-2)" }}>
-      <span className="lbl muted">待生成 · {b.name}</span>
     </div>
   );
 }
@@ -1123,136 +1360,6 @@ function RedoControl({
         </div>
       ) : null}
     </>
-  );
-}
-
-/* 列表视图卡片 */
-function ChunkCard({
-  scene: s,
-  projectId,
-  aspect,
-  gate,
-}: {
-  scene: SceneMeta;
-  projectId: string;
-  aspect: ProjectMeta["aspect"];
-  gate: (b: GateBody) => void;
-}) {
-  const ar = ratio(aspect);
-  const ss = SCENE_STATUS[s.status] ?? SCENE_STATUS.pending;
-  return (
-    <div className="card pad fade">
-      <div className="spaced" style={{ marginBottom: 10 }}>
-        <b style={{ fontSize: 13.5 }}>#{s.index} {s.role}</b>
-        <Status
-          cls={ss.cls}
-          label={ss.label}
-          ring={s.status === "rendering"}
-        />
-      </div>
-      <div style={{ maxWidth: aspect === "9:16" ? 300 : "100%" }}>
-        <ChunkMedia scene={s} projectId={projectId} ar={ar} />
-      </div>
-      <RedoControl scene={s} gate={gate} />
-    </div>
-  );
-}
-
-/* 全屏左右翻页预览视图（#9）：单镜占主区 + 大 video + meta + 重做 + ◀▶ 翻页 */
-function FullScreenChunks({
-  scenes,
-  projectId,
-  aspect,
-  cur,
-  setCur,
-  gate,
-}: {
-  scenes: SceneMeta[];
-  projectId: string;
-  aspect: ProjectMeta["aspect"];
-  cur: number;
-  setCur: (i: number) => void;
-  gate: (b: GateBody) => void;
-}) {
-  const N = scenes.length;
-  if (N === 0) return null;
-  const s = scenes[cur];
-  const b = RB[s.renderer];
-  const ar = ratio(aspect);
-  const narrow = aspect === "9:16";
-
-  return (
-    <div className="card pad fade" style={{ background: "var(--surface-1)" }}>
-      <div className="row" style={{ gap: 14, alignItems: "center" }}>
-        {/* ◀ 翻页 */}
-        <button
-          className="btn ghost"
-          disabled={cur <= 0}
-          onClick={() => setCur(cur - 1)}
-          style={{ flexShrink: 0 }}
-        >
-          ◀
-        </button>
-
-        {/* 主区域单镜 */}
-        <div style={{ flex: 1, display: "grid", placeItems: "center" }}>
-          <div style={{ maxWidth: narrow ? 320 : 640, width: "100%" }}>
-            <ChunkMedia scene={s} projectId={projectId} ar={ar} />
-            <div
-              className="spaced"
-              style={{ marginTop: 12, alignItems: "flex-start" }}
-            >
-              <div>
-                <b style={{ fontSize: 15 }}>
-                  #{s.index} {s.role}
-                </b>
-                <p className="aux" style={{ marginTop: 4 }}>
-                  {s.durationSec}s · {s.onScreenText}
-                </p>
-              </div>
-              <span className={`tag ${b.cls}`}>{b.name}</span>
-            </div>
-            <RedoControl scene={s} gate={gate} />
-          </div>
-        </div>
-
-        {/* ▶ 翻页 */}
-        <button
-          className="btn ghost"
-          disabled={cur >= N - 1}
-          onClick={() => setCur(cur + 1)}
-          style={{ flexShrink: 0 }}
-        >
-          ▶
-        </button>
-      </div>
-
-      {/* 第 i / N 镜 + 圆点导航 */}
-      <div
-        className="row"
-        style={{ justifyContent: "center", marginTop: 14, gap: 8 }}
-      >
-        <span className="chip">
-          第 {cur + 1} / {N} 镜
-        </span>
-        <div className="row" style={{ gap: 6 }}>
-          {scenes.map((sc, i) => (
-            <span
-              key={sc.index}
-              onClick={() => setCur(i)}
-              title={`#${sc.index} ${sc.role}`}
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                cursor: "pointer",
-                background: i === cur ? "var(--accent)" : "var(--border)",
-              }}
-            ></span>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 

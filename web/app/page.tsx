@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell, { EnginePill, IconBtn, BellIcon } from "@/components/AppShell";
 import Status from "@/components/Status";
+import Cover from "@/components/Cover";
 import {
   api,
   projectStatus,
@@ -105,12 +106,10 @@ export default function HomePage() {
         </div>
 
         {/* 模板卡 */}
-        <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 28 }}>
+        <div id="tpl" className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 28 }}>
           {TEMPLATES.map((t) => (
             <Link key={t.type} href={`/new?type=${t.type}`} className="card hover" style={{ padding: 20 }}>
-              <div className="thumb" style={{ height: 120, marginBottom: 16, display: "grid", placeItems: "center", color: "var(--text-3)", background: "radial-gradient(120% 120% at 70% 0%, #16181b, #0c0d0f)" }}>
-                {TPL_ICON[t.type]}
-              </div>
+              <Cover seed={t.type} icon={TPL_ICON[t.type]} aspect="16/10" rounded={10} play hoverPop style={{ marginBottom: 16 }} />
               <h2 style={{ fontSize: 16 }}>{t.title}</h2>
               <p className="aux" style={{ marginTop: 5 }}>{t.desc}</p>
               <p className="dim" style={{ fontSize: 12, marginTop: 12 }}>{t.tag}</p>
@@ -176,12 +175,7 @@ export default function HomePage() {
                         <tr key={p.id} style={{ cursor: "pointer" }} onClick={() => router.push("/projects/" + p.id)}>
                           <td>
                             <div className="row" style={{ gap: 11 }}>
-                              {p.thumb ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={fileUrl(p.id, p.thumb)} alt="" className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto", objectFit: "cover" }} />
-                              ) : (
-                                <span className="thumb" style={{ width: 44, height: 30, margin: 0, flex: "0 0 auto" }} />
-                              )}
+                              <Cover seed={p.id} src={p.thumb ? fileUrl(p.id, p.thumb) : undefined} aspect="16/9" rounded={6} style={{ width: 52, flex: "0 0 auto" }} />
                               <div className="col">
                                 <span className="pri">{p.title}</span>
                                 <span className="dim" style={{ fontSize: 11.5 }}>{p.aspect}</span>
@@ -208,8 +202,31 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* 右栏：概览 + 存储（真实数据） */}
+          {/* 右栏：快速上手 + 概览 + 存储（概览/存储为真实数据） */}
           <div className="col" style={{ gap: 16 }}>
+            <div className="summary">
+              <h3>快速上手</h3>
+              <div className="col" style={{ gap: 8 }}>
+                <button
+                  type="button"
+                  className="card hover spaced"
+                  style={{ padding: "11px 14px", textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
+                  onClick={() => document.getElementById("tpl")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>选择模板</span>
+                  <span className="dim">→</span>
+                </button>
+                <Link href="/new" className="card hover spaced" style={{ padding: "11px 14px" }}>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>上传素材</span>
+                  <span className="dim">→</span>
+                </Link>
+                <Link href="/history" className="card hover spaced" style={{ padding: "11px 14px" }}>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>查看历史</span>
+                  <span className="dim">→</span>
+                </Link>
+              </div>
+            </div>
+
             <div className="summary">
               <h3>概览</h3>
               <div className="kv"><span className="k">全部项目</span><span className="v">{stats?.counts.total ?? "—"}</span></div>
