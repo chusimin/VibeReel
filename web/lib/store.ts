@@ -148,7 +148,8 @@ export function createProject(body: CreateProjectBody): ProjectMeta {
     assets: [],
     roleRefs: Array.isArray(body.roleRefs) ? body.roleRefs.map(String) : [],
     aspect: body.aspect,
-    vo: fp.vo,
+    vo: typeof body.voiceover === "boolean" ? body.voiceover : fp.vo,
+    subtitle: typeof body.subtitle === "boolean" ? body.subtitle : false,
     model: body.model || process.env.VR_MODEL || "sonnet",
     stage: "ingesting",
     concepts: [],
@@ -181,6 +182,7 @@ function migrate(raw: Record<string, unknown>): ProjectMeta {
   if (p.material === undefined) p.material = null;
   if (!Array.isArray(p.assets)) p.assets = [];
   if (!Array.isArray(p.roleRefs)) p.roleRefs = [];
+  if (typeof p.subtitle !== "boolean") p.subtitle = false;
   return p;
 }
 

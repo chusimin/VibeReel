@@ -177,7 +177,8 @@ export interface ProjectMeta {
   assets: AssetItem[]; // #1 项目级素材库
   roleRefs: string[]; // #1 选用的角色/品牌库条目 id（指向全局 library）
   aspect: Aspect;
-  vo: boolean;
+  vo: boolean; // 配音（缺省随类型；可被创建时 voiceover 覆盖。TTS 生成待后端接入）
+  subtitle: boolean; // 字幕开关（烧录待后端接入；当前仅记录偏好）
   model: string; // claude --model 档（POC：sonnet/opus/haiku 别名）
   stage: Stage;
   concepts: Concept[]; // 闸门① 候选
@@ -209,6 +210,8 @@ export interface CreateProjectBody {
   styleId: string; // 内置 11 个之一，或 custom-* 自定义风格 id
   model?: string;
   roleRefs?: string[]; // #1 选用的角色/品牌库条目
+  voiceover?: boolean; // 用户覆盖配音开关（缺省随类型）。生成待后端 TTS。
+  subtitle?: boolean; // 字幕开关（缺省关）。烧录待后端。
   // 若 false：创建后不自动跑流程（等代码包/素材上传完再 /start）。默认 true。
   autostart?: boolean;
 }

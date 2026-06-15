@@ -1369,6 +1369,24 @@ function GateFinal({
         </div>
       </div>
 
+      {/* 导出设置（只读复核）+ 输出偏好状态 chip——codex 建议：终检页只读展示 */}
+      <div style={{ maxWidth: 420, margin: "0 auto 18px" }}>
+        <div className="summary">
+          <h3>导出设置</h3>
+          <div className="kv"><span className="k">格式</span><span className="v">MP4</span></div>
+          <div className="kv"><span className="k">分辨率</span><span className="v">1080p</span></div>
+          <div className="kv"><span className="k">画幅</span><span className="v">{p.aspect}</span></div>
+          <div className="kv">
+            <span className="k">配音</span>
+            <span className="v">{p.vo ? "开" : "关"}{p.vo ? <span className="tag" style={{ marginLeft: 8 }}>待生成支持</span> : null}</span>
+          </div>
+          <div className="kv">
+            <span className="k">字幕</span>
+            <span className="v">{p.subtitle ? "开" : "关"}{p.subtitle ? <span className="tag" style={{ marginLeft: 8 }}>{out.srt ? "已生成" : "待生成支持"}</span> : null}</span>
+          </div>
+        </div>
+      </div>
+
       <div
         className="row"
         style={{ justifyContent: "center", flexWrap: "wrap", gap: 10 }}

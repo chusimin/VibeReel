@@ -72,7 +72,8 @@
 | 项 | 状态 | 说明 |
 |---|---|---|
 | 切真模型 API | ⬜ | 用户给 key → `.env.local` 设 `VR_LLM=api` + `ANTHROPIC_API_KEY` 跑通生产链 |
-| 配音 / 字幕（vo→TTS + srt 烧录） | ⬜ | vo 文案已生成；config.voiceover 暂 false，未接 edge-tts/minimax |
+| 配音生成（vo→TTS） | ⬜ | **UI+持久化已接**（`/new` 输出偏好开关 → `voiceover` 落 `project.vo`）；渲染端 vo→TTS（edge-tts/minimax）待接，让 `assemble` 混入语轨 |
+| 字幕生成（srt 烧录） | ⬜ | **UI+持久化已接**（`subtitle` 落 `project.subtitle`）；渲染端 vo→srt 生成 + 烧录待接，产出 `outputs.srt` |
 | still-kenburns 用上传图（素材推拉真渲） | ⬜ | 现 visual 走文字模板；上传图 → 引擎 product-capture/media 待接 |
 | 渲染性能（每镜单独 spawn 一次 bundle） | 🟡 | 首镜打包后有缓存，后续约 6s/镜；可批量渲染优化 |
 | 分镜表 renderer 下拉 ↔ visual 联动 | 🟡 | 当前 renderer 仅徽章，真实渲染以 visual 为准；可改成直接编辑 visual.type |
@@ -96,6 +97,12 @@
 | 验证 | ✅ | `tsc --noEmit` 0 错；`next build` 通过；8 屏逐一截图核对 |
 
 **修复的 UI 审查问题**：状态色（待确认琥珀 ≠ 渲染中蓝）、双重编号、摘要假开关、状态词收敛、对比度。
+
+**二次迭代（用户反馈后，含 codex 设计二审）**：
+- **讲稿步可见**：`/new` 顶部步进器改为**随类型动态**（教学/科普 6 步含「讲稿确认」，showreel 5 步）；项目页步骤栏本就按 `railFor` 显示讲稿。
+- **配音 / 字幕控件**：`/new` 摘要新增「输出偏好」**真实开关**（配音随类型缺省、字幕默认开），落 `project.vo / project.subtitle`（新增 `Switch` 组件 + `CreateProjectBody.voiceover/subtitle`）；终检页**只读复核** + 「待生成支持」chip。生成能力（TTS/字幕烧录）见 §6 待办。
+- **多渲染后端保留**（N 种不简化）；徽章暗色下中性化。
+
 **设计稿 vs 后端差异清单**：见 [docs/设计稿与实现差异-mismatches.md](设计稿与实现差异-mismatches.md)（决策口径：以设计稿为准，后端不动；需产品决策项见该文档第二/三节）。
 
 ## 关联

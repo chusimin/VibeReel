@@ -3,6 +3,7 @@
 import { ReactNode, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EnginePill } from "@/components/AppShell";
+import Switch from "@/components/Switch";
 import {
   api,
   toast,
@@ -11,6 +12,7 @@ import {
   TYPES,
   STYLE_PACKS,
   recommendedFor,
+  railFor,
 } from "@/app/_ui";
 import type {
   VideoType,
@@ -29,8 +31,18 @@ const TYPE_LABEL: Record<VideoType, { name: string; desc: string }> = {
   popsci: { name: "知识科普", desc: "适合概念解析、原理科普、信息解读" },
 };
 
-// /new 顶部预览步进器（静态：内容准备→…→最终检查）。design 为准：不展示讲稿步。
-const JOURNEY = ["内容准备", "方向确认", "分镜确认", "分段预览", "最终检查"];
+// 工作流步进器标签映射（与项目页一致）。
+const RAIL_LABEL: Record<string, string> = {
+  方向: "方向确认",
+  讲稿: "讲稿确认",
+  分镜: "分镜确认",
+  分段: "分段预览",
+  终检: "最终检查",
+};
+// 顶部预览步进器：随类型动态——教学/科普会多出「讲稿确认」一步。
+function journeyFor(type: VideoType): string[] {
+  return ["内容准备", ...railFor(type).map((g) => RAIL_LABEL[g.l] ?? g.l)];
+}
 
 /* 单页表单分区（标题式，不用①②③避免与底部步进器双重编号——修复审查 #4） */
 function Section({ title, desc, children }: { title: string; desc?: string; children: ReactNode }) {
@@ -87,6 +99,9 @@ function NewProjectInner() {
   const [colors, setColors] = useState<DraftColor[]>([]);
   const [roles, setRoles] = useState<RoleEntry[]>([]);
   const [roleRefs, setRoleRefs] = useState<string[]>([]);
+  // 输出偏好（配音随类型缺省；字幕默认开）。生成待后端 TTS/烧录，当前仅持久化偏好。
+  const [voiceover, setVoiceover] = useState<boolean>(TYPES.showreel.vo);
+  const [subtitle, setSubtitle] = useState<boolean>(true);
   const [busy, setBusy] = useState(false);
 
   // 进页面拉库数据 + 接受首页模板带来的 ?type=
@@ -102,6 +117,7 @@ function NewProjectInner() {
     setType(k);
     const reco = recommendedFor(k);
     setStyle(reco[0] ?? STYLE_PACKS[0].id);
+    setVoiceover(TYPES[k].vo); // 配音缺省随类型（showreel 关，教学/科普 开）
   }
   function addText(kind: "url" | "idea") { setTexts([...texts, { kind, value: kind === "url" ? "https://" : "" }]); }
   function setTextAt(i: number, patch: Partial<DraftText>) { setTexts(texts.map((t, idx) => (idx === i ? { ...t, ...patch } : t))); }
@@ -129,7 +145,7 @@ function NewProjectInner() {
       toast("至少填一条链接或想法");
       return null;
     }
-    const { id } = await api.createProject({ videoType: type, inputs, aspect, styleId: style, roleRefs, autostart: false });
+    const { id } = await api.createProject({ videoType: type, inputs, aspect, styleId: style, roleRefs, voiceover, subtitle, autostart: false });
     for (const f of codeFiles) await api.addInputFile(id, f);
     for (const a of assetFiles) await api.uploadAsset(id, a.file, a.file.type.includes("svg") ? "logo" : "image");
     for (const c of colors) await api.addAssetMeta(id, { kind: "color", ref: c.ref, name: c.name });
@@ -315,9 +331,27 @@ function NewProjectInner() {
               <div className="kv"><span className="k">画幅</span><span className="v">{aspect}</span></div>
               <div className="kv"><span className="k">风格</span><span className="v">{curStyle?.name ?? style}</span></div>
               <div className="kv"><span className="k">素材</span><span className="v">{assetFiles.length + colors.length} 项</span></div>
-              {/* 配音/草稿图为只读派生值（随类型，后端决定）——不做假开关，修复审查 #3 */}
               <div className="kv"><span className="k">草稿图</span><span className="v">开启</span></div>
-              <div className="kv"><span className="k">配音</span><span className="v">{TYPES[type].vo ? "开启" : "关闭"}<span className="dim" style={{ fontWeight: 400, marginLeft: 6, fontSize: 11 }}>随类型</span></span></div>
+            </div>
+
+            {/* 输出偏好：真实开关，持久化保存；生成能力（TTS/字幕烧录）后端稍后接入 */}
+            <div className="summary" style={{ marginTop: 14 }}>
+              <h3>输出偏好</h3>
+              <div className="kv">
+                <span className="k">配音</span>
+                <span className="row" style={{ marginLeft: "auto", gap: 10 }}>
+                  <span className="dim" style={{ fontSize: 11 }}>{voiceover ? "开" : "关"}</span>
+                  <Switch on={voiceover} onChange={setVoiceover} />
+                </span>
+              </div>
+              <div className="kv">
+                <span className="k">字幕</span>
+                <span className="row" style={{ marginLeft: "auto", gap: 10 }}>
+                  <span className="dim" style={{ fontSize: 11 }}>{subtitle ? "开" : "关"}</span>
+                  <Switch on={subtitle} onChange={setSubtitle} />
+                </span>
+              </div>
+              <p className="aux" style={{ marginTop: 10 }}>已保存为偏好，生成能力稍后上线。</p>
             </div>
 
             <button className="btn block" style={{ marginTop: 14 }} disabled={busy || !hasInput} onClick={generate}>
@@ -333,16 +367,19 @@ function NewProjectInner() {
         {/* 底部全局步进器（内容准备 = 当前；预览整段旅程） */}
         <div className="divider" style={{ margin: "32px 0 18px" }} />
         <div className="rail">
-          {JOURNEY.map((s, idx) => (
+          {journeyFor(type).map((s, idx, arr) => (
             <span key={s} style={{ display: "contents" }}>
               <div className={`step ${idx === 0 ? "cur" : ""}`}>
                 <span className="num">{idx + 1}</span>
                 {s}
               </div>
-              {idx < JOURNEY.length - 1 ? <span className="bar" /> : null}
+              {idx < arr.length - 1 ? <span className="bar" /> : null}
             </span>
           ))}
         </div>
+        {TYPES[type].vo ? (
+          <p className="aux" style={{ marginTop: 8 }}>教学 / 科普 类型多一步「讲稿确认」。</p>
+        ) : null}
       </div>
     </div>
   );

@@ -26,7 +26,8 @@ interface ProjectMeta {
   input: { kind: 'url' | 'idea'; value: string };
   aspect: '16:9' | '9:16' | '1:1';   // 默认 '16:9'；映射引擎 --platform（16:9→generic, 9:16→douyin, 1:1→generic 1080² 变体）
   assets: AssetItem[];               // 用户上传素材
-  vo: boolean;                       // 配音（showreel 默认 false；teaching/popsci 默认 true）
+  vo: boolean;                       // 配音（缺省随类型：showreel false / teaching·popsci true）；可被创建时 voiceover 覆盖。TTS 生成待接（见进度 §6）
+  subtitle: boolean;                 // 字幕开关（缺省 false）；当前仅记录偏好，srt 生成+烧录待接（见进度 §6）
   model: string;                     // 'claude-sonnet-4-6' 等（只记档，不存 key）；POC 映射 claude --model
   stage: Stage;
   gate: GateState | null;
@@ -59,6 +60,7 @@ interface GateState { kind: GateId; payload: unknown; }
 ### 接口要点说明
 
 - **ProjectMeta**：项目级元数据。`videoType` 决定装哪套四件套；`fourPack` 是四件套（structure + playbook + style + gates + qaRules）的解析结果；`aspect` 默认 `16:9` 并映射引擎 `--platform`；`model` 只记档，不存 key；`outputs` 记录终检产物相对路径。
+- **配音 / 字幕（`vo` / `subtitle`）**：创建时 `CreateProjectBody.voiceover?` / `subtitle?` 可覆盖（`/new`「输出偏好」开关）；缺省 `vo` 随类型、`subtitle=false`。**当前仅持久化偏好**，渲染端 TTS 混音与 srt 烧录待实现（进度 §6）；终检页只读复核，标「待生成支持」。`outputs.srt` 仅在字幕生成接入后产出。
 - **GateId**：闸门标识序列（concept / script / storyboard / chunk / final），`fourPack.gates` 据此排该类型闸门序列。
 - **Stage**：编排状态机；其中 `scripting` 为科普/教学特有，`drafting` 为 gpt-image 草稿生成中（B3 生成态），`storyboard` → 闸门②，`voicing`/`rendering` → 闸门③（逐镜）。
 - **SceneMeta**：分镜级元数据，含后端选择（`renderer`）、草稿（`draftImage`）、正片（`mp4`）、状态机（`status`）与版本（`revisions`）。
