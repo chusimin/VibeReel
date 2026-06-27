@@ -73,6 +73,29 @@ function ffmpegBin(): string {
   return process.env.FFMPEG_BIN || "ffmpeg";
 }
 
+// ImageMagick 7 可执行名（命令是 `magick`）。可用 MAGICK_BIN 覆盖。
+function magickBin(): string {
+  return process.env.MAGICK_BIN || "magick";
+}
+
+// ---- magick 是否可用（核心版 ffmpeg 无 drawtext，字幕改走 magick 渲 PNG）。探一次缓存。----
+const gMagick = globalThis as unknown as { __vrMagick?: boolean };
+function magickAvailable(): boolean {
+  if (typeof gMagick.__vrMagick === "boolean") return gMagick.__vrMagick;
+  let ok = false;
+  try {
+    const out = spawnSync(magickBin(), ["-version"], {
+      encoding: "utf8",
+      timeout: 10000,
+    });
+    ok = out.status === 0 && /ImageMagick/i.test(out.stdout || "");
+  } catch {
+    ok = false;
+  }
+  gMagick.__vrMagick = ok;
+  return ok;
+}
+
 // 画幅 → 出图取向描述（喂给图像模型，约束竖/横/方构图）。
 function aspectGuidance(aspect: Aspect): string {
   switch (aspect) {
@@ -196,7 +219,10 @@ export async function renderScene(
 
 // ============================================================
 // still-kenburns：把 codex 静图变成「运镜 + 屏幕文字」的镜头 mp4。
-// 只用 ffmpeg（zoompan + drawbox + drawtext），不碰 engine/Remotion。
+// 字幕方案：核心版 ffmpeg 无 drawtext，改为 magick 渲透明 PNG → ffmpeg overlay。
+//   底视频：ffmpeg scale/crop/zoompan 运镜；
+//   字幕：magick 把文案渲成带半透明衬底的透明 PNG（自动折行），作为第二输入 overlay 到底部居中。
+// 不碰 engine/Remotion。magick 不可用 / 失败 → 退回仅运镜不烧字（绝不硬崩）。
 // ============================================================
 
 // 草图绝对路径（与 makeDraft 落点一致：drafts/scene-N.png）。
@@ -204,44 +230,17 @@ function draftAbsPath(p: ProjectMeta, scene: SceneMeta): string {
   return path.join(draftsDir(p.projectId), `scene-${scene.index}.png`);
 }
 
-// ffmpeg 滤镜参数转义：把 \ : ' 转义掉（用于 fontfile= / textfile= 的路径值）。
-function ffEscapeFilterPath(v: string): string {
-  return v.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\\'");
-}
-
-// drawtext 文本里仍需转义的元字符（即使走 textfile，% 与 \ 仍被 drawtext 解释）。
-function ffEscapeDrawtextBody(v: string): string {
-  return v.replace(/\\/g, "\\\\").replace(/%/g, "\\%");
-}
-
-// ---- drawtext 滤镜是否可用（部分 ffmpeg 编译未带 libfreetype）。探一次缓存。----
-const gFF = globalThis as unknown as { __vrDrawtext?: boolean };
-function drawtextAvailable(): boolean {
-  if (typeof gFF.__vrDrawtext === "boolean") return gFF.__vrDrawtext;
-  let ok = false;
-  try {
-    const out = spawnSync(ffmpegBin(), ["-hide_banner", "-filters"], {
-      encoding: "utf8",
-      timeout: 10000,
-    });
-    ok = /(^|\s)drawtext\s/m.test(out.stdout || "");
-  } catch {
-    ok = false;
-  }
-  gFF.__vrDrawtext = ok;
-  return ok;
-}
-
-// 解析中文字体文件：优先 env FONT_FILE，其次默认 PingFang，再退常见 mac CJK 字体。
+// 解析中文字体文件：优先 env FONT_FILE，默认 Arial Unicode（CJK 全覆盖），
+// 再退候选链 Hiragino Sans GB → STHeiti Medium 等。
 // 全都不存在 → 返回 null（调用方降级为不叠字）。
 function resolveFontFile(): string | null {
   const candidates = [
     process.env.FONT_FILE,
-    "/System/Library/Fonts/PingFang.ttc",
-    "/System/Library/Fonts/STHeiti Medium.ttc",
-    "/System/Library/Fonts/Hiragino Sans GB.ttc",
     "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
     "/Library/Fonts/Arial Unicode.ttf",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
+    "/System/Library/Fonts/STHeiti Medium.ttc",
+    "/System/Library/Fonts/PingFang.ttc",
     "/System/Library/Fonts/Songti.ttc",
   ].filter(Boolean) as string[];
   for (const f of candidates) {
@@ -254,64 +253,139 @@ function resolveFontFile(): string | null {
   return null;
 }
 
-// 构造 Ken Burns + 字幕的滤镜链字符串。
-//   1) scale 覆盖目标尺寸 → crop 精确裁切（避免黑边）。
-//   2) zoompan 缓慢推进：z 从 1 平滑到 ~1.12（d=帧数，s=目标尺寸，fps=30）。
-//   3) 可选：底部半透明压条（drawbox）+ 大白字（drawtext，textfile 传文本）。
-//   4) format=yuv420p 收尾。
-function buildKenBurnsFilter(
+// 用 magick 把 text 渲成「透明背景 + 半透明深色衬底」的字幕 PNG。
+//   - 宽度 ≈ 视频宽 86%，magick `-size <w>x caption:` 按宽度自动折行（中文长句可折）。
+//   - 白字 + 细黑描边（一遍 stroke+fill），pointsize ≈ 视频高 5%，提升深/浅底上的可读性。
+//   - 文本经临时文件 `caption:@file` 传入，避开 shell/参数转义问题。
+//   - 衬底：把文本块包进一条半透明圆角深色压条（同尺寸 roundrectangle），保证深色衬底上清晰。
+//   失败时抛错，调用方据此降级为仅运镜。
+async function renderCaptionPng(
+  text: string,
+  videoW: number,
+  videoH: number,
+  absPngPath: string
+): Promise<void> {
+  const fontFile = resolveFontFile();
+  if (!fontFile) throw new Error("未找到可用 CJK 字体文件（FONT_FILE 未设或不存在）");
+
+  const capW = Math.round(videoW * 0.86); // 文本折行宽度 ≈ 视频宽 86%
+  const pt = Math.max(12, Math.round(videoH * 0.05)); // 字号 ≈ 视频高 5%
+  const pad = Math.max(8, Math.round(videoH * 0.02)); // 文本块内边距
+  const radius = Math.round(pt * 0.5); // 圆角半径
+
+  // 文本写临时文件，用 caption:@file 传入（安全，避免特殊字符转义问题）。
+  const txtFile = path.join(
+    os.tmpdir(),
+    `vr-cap-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`
+  );
+  const textPng = `${absPngPath}.text.png`;
+  fs.writeFileSync(txtFile, text, "utf8");
+
+  try {
+    // ① 渲文本（白字 + 细黑描边），RGBA 透明底，按 capW 自动折行，四周留 pad。
+    await run(magickBin(), [
+      "-background",
+      "none",
+      "-fill",
+      "white",
+      "-stroke",
+      "black",
+      "-strokewidth",
+      "2",
+      "-font",
+      fontFile,
+      "-pointsize",
+      String(pt),
+      "-size",
+      `${capW}x`,
+      "-gravity",
+      "center",
+      `caption:@${txtFile}`,
+      "-bordercolor",
+      "none",
+      "-border",
+      String(pad),
+      `PNG32:${textPng}`,
+    ]);
+
+    // ② 量文本块尺寸 → 画同尺寸半透明圆角深色衬底 → 文本居中合成到衬底上。
+    const ident = spawnSync(
+      magickBin(),
+      ["identify", "-format", "%w %h", textPng],
+      { encoding: "utf8", timeout: 10000 }
+    );
+    if (ident.status !== 0) {
+      throw new Error(`magick identify 失败: ${(ident.stderr || "").trim().slice(-300)}`);
+    }
+    const [tw, th] = (ident.stdout || "").trim().split(/\s+/).map((n) => parseInt(n, 10));
+    if (!tw || !th) throw new Error(`无法解析字幕画布尺寸: "${ident.stdout}"`);
+
+    await run(magickBin(), [
+      "-size",
+      `${tw}x${th}`,
+      "xc:none",
+      "-fill",
+      "rgba(0,0,0,0.5)",
+      "-draw",
+      `roundrectangle 0,0 ${tw - 1},${th - 1} ${radius},${radius}`,
+      textPng,
+      "-gravity",
+      "center",
+      "-composite",
+      `PNG32:${absPngPath}`,
+    ]);
+  } finally {
+    for (const f of [txtFile, textPng]) {
+      try {
+        fs.unlinkSync(f);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+// 构造底视频运镜滤镜链（scale 覆盖 → crop 裁切 → zoompan 缓推）。
+//   inLabel/outLabel 为空字符串时省略对应 pad 标签（适配 -vf 纯链；filter_complex 传 [0:v]/[bg]）。
+//   不含字幕（字幕走 overlay）。
+//   - 先放大到 1.25× 再缓推到 1.12×，给 zoompan 留采样余量、避免抖动/越界。
+//   - z 平滑递增并 clamp，居中推。
+function buildKenBurnsMotion(
   w: number,
   h: number,
   frames: number,
   fps: number,
-  textFile: string | null,
-  fontFile: string | null
+  inLabel: string,
+  outLabel: string
 ): string {
-  // 先放大到 1.25× 再缓推到 1.12×，给 zoompan 留出采样余量、避免抖动/越界。
   const coverW = Math.round(w * 1.25);
   const coverH = Math.round(h * 1.25);
   const zoomMax = 1.12;
   const zoomStep = (zoomMax - 1) / Math.max(1, frames - 1);
-
-  const chain: string[] = [
-    `scale=${coverW}:${coverH}:force_original_aspect_ratio=increase`,
-    `crop=${coverW}:${coverH}`,
-    // z 平滑递增并 clamp；居中推（x/y 取中心）；s=目标尺寸；d=总帧数。
+  return (
+    `${inLabel}scale=${coverW}:${coverH}:force_original_aspect_ratio=increase,` +
+    `crop=${coverW}:${coverH},` +
     `zoompan=z='min(zoom+${zoomStep.toFixed(6)},${zoomMax})':` +
-      `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
-      `d=${frames}:s=${w}x${h}:fps=${fps}`,
-  ];
+    `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+    `d=${frames}:s=${w}x${h}:fps=${fps}${outLabel}`
+  );
+}
 
-  if (textFile && fontFile) {
-    const barH = Math.round(h * 0.18); // 底部压条高度
-    const fontSize = Math.round(h * 0.055); // 大字（约画高 5.5%）
-    // 半透明深色压条，提升白字可读性。
-    chain.push(
-      `drawbox=x=0:y=ih-${barH}:w=iw:h=${barH}:color=black@0.45:t=fill`
-    );
-    // 白字：底部居中、大字号（line_spacing 给多行文本一点呼吸）。
-    chain.push(
-      [
-        "drawtext=" + `fontfile='${ffEscapeFilterPath(fontFile)}'`,
-        `textfile='${ffEscapeFilterPath(textFile)}'`,
-        "fontcolor=white",
-        `fontsize=${fontSize}`,
-        "line_spacing=10",
-        // 水平居中（x 表达式即可，不依赖较新的 text_align 选项，兼容老 ffmpeg）。
-        `x=(w-text_w)/2`,
-        // 文本基线置于压条中部偏上，长文本向上溢出仍可读。
-        `y=h-${Math.round(barH * 0.62)}-text_h/2`,
-        `box=0`,
-        `shadowcolor=black@0.6:shadowx=2:shadowy=2`,
-        `expansion=none`,
-      ].join(":") +
-        // 用 enable=between 全程显示。
-        `:enable='between(t,0,${(frames / fps).toFixed(2)})'`
-    );
-  }
-
-  chain.push("format=yuv420p");
-  return chain.join(",");
+// 在运镜底视频上叠字幕 PNG 的完整 filter_complex（第二输入 [1:v] = caption.png）。
+//   底部居中，留底边距 ≈ 视频高 8%；最后 format=yuv420p。
+function buildKenBurnsOverlayComplex(
+  w: number,
+  h: number,
+  frames: number,
+  fps: number
+): string {
+  const bottomMargin = Math.round(h * 0.08); // 底边距 ≈ 视频高 8%
+  const motion = buildKenBurnsMotion(w, h, frames, fps, "[0:v]", "[bg]");
+  return (
+    `${motion};` +
+    `[bg][1:v]overlay=x=(W-w)/2:y=H-h-${bottomMargin}:format=auto,` +
+    `format=yuv420p[out]`
+  );
 }
 
 // 主入口：still-kenburns 单镜渲染。返回相对路径 scenes/scene-N.mp4。
@@ -343,64 +417,97 @@ export async function renderSceneKenBurns(
     }
   }
 
-  // 2) 解析字幕：仅当 onScreenText 非空 && drawtext 可用 && 字体存在，才叠字。
-  let textFile: string | null = null;
-  let fontFile: string | null = null;
+  // 2) 字幕 PNG：仅当 onScreenText 非空 && magick 可用，才用 magick 渲透明字幕 PNG。
+  //    magick 不可用 / 渲染失败 → captionPng 置空，降级为仅运镜（不硬崩）。
+  let captionPng: string | null = null;
   const wantText = !!(scene.onScreenText && scene.onScreenText.trim());
   if (wantText) {
-    if (!drawtextAvailable()) {
+    if (!magickAvailable()) {
       console.warn(
-        `[kenburns] 当前 ffmpeg 未编译 drawtext 滤镜，第 ${scene.index} 镜降级为仅运镜（不叠字）。`
+        `[kenburns] 未检测到可用 magick（MAGICK_BIN），第 ${scene.index} 镜降级为仅运镜（不叠字）。`
       );
     } else {
-      fontFile = resolveFontFile();
-      if (!fontFile) {
+      const tmpPng = path.join(
+        os.tmpdir(),
+        `vr-kb-${p.projectId}-${scene.index}-${Date.now()}.png`
+      );
+      try {
+        await renderCaptionPng(scene.onScreenText.trim(), w, h, tmpPng);
+        captionPng = tmpPng;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.warn(
-          `[kenburns] 未找到可用字体文件（FONT_FILE 未设或不存在），第 ${scene.index} 镜降级为仅运镜（不叠字）。`
+          `[kenburns] 第 ${scene.index} 镜字幕 PNG 渲染失败，降级为仅运镜（不叠字）: ${msg}`
         );
-      } else {
-        textFile = path.join(
-          os.tmpdir(),
-          `vr-kb-${p.projectId}-${scene.index}-${Date.now()}.txt`
-        );
-        fs.writeFileSync(
-          textFile,
-          ffEscapeDrawtextBody(scene.onScreenText.trim()),
-          "utf8"
-        );
+        captionPng = null;
+        try {
+          fs.unlinkSync(tmpPng);
+        } catch {
+          /* ignore */
+        }
       }
     }
   }
 
-  // 3) 出片。
-  const filter = buildKenBurnsFilter(w, h, frames, fps, textFile, fontFile);
+  // 3) 出片：有字幕 → 双输入 filter_complex + overlay；无字幕 → 单输入仅运镜。
   try {
-    await run(ffmpegBin(), [
-      "-y",
-      "-loop",
-      "1",
-      "-i",
-      srcAbs,
-      "-t",
-      String(dur),
-      "-vf",
-      filter,
-      "-r",
-      String(fps),
-      "-frames:v",
-      String(frames),
-      "-pix_fmt",
-      "yuv420p",
-      "-c:v",
-      "libx264",
-      "-movflags",
-      "+faststart",
-      outAbs,
-    ]);
+    if (captionPng) {
+      const filter = buildKenBurnsOverlayComplex(w, h, frames, fps);
+      await run(ffmpegBin(), [
+        "-y",
+        "-loop",
+        "1",
+        "-i",
+        srcAbs,
+        "-i",
+        captionPng,
+        "-filter_complex",
+        filter,
+        "-map",
+        "[out]",
+        "-t",
+        String(dur),
+        "-r",
+        String(fps),
+        "-frames:v",
+        String(frames),
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-movflags",
+        "+faststart",
+        outAbs,
+      ]);
+    } else {
+      const filter = `${buildKenBurnsMotion(w, h, frames, fps, "", "")},format=yuv420p`;
+      await run(ffmpegBin(), [
+        "-y",
+        "-loop",
+        "1",
+        "-i",
+        srcAbs,
+        "-t",
+        String(dur),
+        "-vf",
+        filter,
+        "-r",
+        String(fps),
+        "-frames:v",
+        String(frames),
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-movflags",
+        "+faststart",
+        outAbs,
+      ]);
+    }
   } finally {
-    if (textFile) {
+    if (captionPng) {
       try {
-        fs.unlinkSync(textFile);
+        fs.unlinkSync(captionPng);
       } catch {
         /* ignore */
       }
