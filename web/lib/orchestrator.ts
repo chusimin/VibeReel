@@ -51,6 +51,20 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// 无依赖并发限制：把 items 切成每组 ≤ limit，逐组并行、组间串行。
+// 用于草图出图——一次最多并发 limit 路，避免 codex 被挤爆全超时。
+async function mapWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  const size = Math.max(1, limit);
+  for (let i = 0; i < items.length; i += size) {
+    const chunk = items.slice(i, i + size);
+    await Promise.all(chunk.map(fn));
+  }
+}
+
 function push(p: ProjectMeta, message?: string, pct?: number): void {
   saveProject(p);
   emit(p.projectId, { project: p, message, pct });
@@ -129,13 +143,12 @@ async function runStoryboard(
 
   p.stage = "drafting";
   push(p, "正在生成分镜草图…", 55);
-  // 所有镜并行出图（codex 单张 ~70s，串行 4-6 张会等数分钟）。
-  await Promise.all(
-    p.scenes.map(async (scene) => {
-      const rel = await makeDraft(p, scene);
-      scene.draftImage = rel;
-    })
-  );
+  // 并发上限 2 分批出图（6 路一起会把 codex 挤爆全超时；本机 codex 还要起 MCP
+  // 插件，并发越高单张越慢——实测 3 路在真流水线里会有镜超时退回纯色，降到 2 稳）。
+  await mapWithConcurrency(p.scenes, 2, async (scene) => {
+    const rel = await makeDraft(p, scene);
+    scene.draftImage = rel;
+  });
 
   p.stage = "storyboard";
   p.awaitingGate = "storyboard";

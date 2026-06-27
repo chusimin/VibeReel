@@ -46,7 +46,12 @@ class CodexCliProvider implements ImageProvider {
     const bin = process.env.CODEX_BIN || "codex";
     const workDir = path.dirname(absOutPath);
     const fileName = path.basename(absOutPath);
-    const timeoutMs = opts?.timeoutMs ?? 180000;
+    // 默认 8 分钟，env 可调（VR_IMAGE_TIMEOUT_MS）。codex image_gen 偶尔很慢，
+    // 且本机 codex 会加载 MCP 插件（Figma 等）启动有额外开销，留足超时。
+    const envTimeout = Number(process.env.VR_IMAGE_TIMEOUT_MS);
+    const defaultTimeoutMs =
+      Number.isFinite(envTimeout) && envTimeout > 0 ? envTimeout : 480000;
+    const timeoutMs = opts?.timeoutMs ?? defaultTimeoutMs;
 
     fs.mkdirSync(workDir, { recursive: true });
 
