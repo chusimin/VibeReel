@@ -129,10 +129,13 @@ async function runStoryboard(
 
   p.stage = "drafting";
   push(p, "正在生成分镜草图…", 55);
-  for (const scene of p.scenes) {
-    const rel = await makeDraft(p, scene);
-    scene.draftImage = rel;
-  }
+  // 所有镜并行出图（codex 单张 ~70s，串行 4-6 张会等数分钟）。
+  await Promise.all(
+    p.scenes.map(async (scene) => {
+      const rel = await makeDraft(p, scene);
+      scene.draftImage = rel;
+    })
+  );
 
   p.stage = "storyboard";
   p.awaitingGate = "storyboard";

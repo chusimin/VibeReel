@@ -2,9 +2,10 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import type { Aspect, ProjectMeta, Renderer, SceneMeta } from "@/lib/types";
+import type { Aspect, Concept, ProjectMeta, Renderer, SceneMeta } from "@/lib/types";
 import { draftsDir, outputsDir, scenesDir } from "@/lib/store";
 import { renderSceneViaEngine } from "@/lib/engine";
+import { generateImage } from "@/lib/image";
 
 function dims(aspect: Aspect): { w: number; h: number } {
   switch (aspect) {
@@ -72,16 +73,97 @@ function ffmpegBin(): string {
   return process.env.FFMPEG_BIN || "ffmpeg";
 }
 
-// 纯色 PNG 草图（不使用 drawtext，文字由前端叠加）。返回相对路径。
+// 画幅 → 出图取向描述（喂给图像模型，约束竖/横/方构图）。
+function aspectGuidance(aspect: Aspect): string {
+  switch (aspect) {
+    case "9:16":
+      return "vertical 9:16 portrait composition, full-frame mobile-friendly framing";
+    case "1:1":
+      return "square 1:1 composition, centered subject";
+    case "16:9":
+    default:
+      return "wide 16:9 landscape cinematic composition";
+  }
+}
+
+// 取当前选中的创意方向（chosenConcept 索引；缺省退首个；都没有则 null）。
+function selectedConcept(p: ProjectMeta): Concept | null {
+  if (
+    p.chosenConcept != null &&
+    p.chosenConcept >= 0 &&
+    p.chosenConcept < p.concepts.length
+  ) {
+    return p.concepts[p.chosenConcept];
+  }
+  return p.concepts[0] ?? null;
+}
+
+// 把 scene + 选中 concept + 风格拼成一段英文图像 prompt。
+// 要点：concept.look（画面方向）+ scene.role + onScreenText 主题 + palette/风格倾向 +
+//       画幅取向；并明确要求图里"不要有任何文字/字母/水印"（屏幕文字后续单独叠）。
+function buildDraftPrompt(p: ProjectMeta, scene: SceneMeta): string {
+  const c = selectedConcept(p);
+  const parts: string[] = [];
+
+  // 画面方向（最重要）：concept.look。
+  if (c?.look) parts.push(c.look.trim());
+
+  // 这一镜的叙事角色 + 屏幕文字承载的主题（作为画面"讲什么"的线索，但不入画为文字）。
+  const roleBits: string[] = [];
+  if (scene.role) roleBits.push(`scene role: ${scene.role.trim()}`);
+  if (scene.onScreenText) {
+    roleBits.push(`thematically about "${scene.onScreenText.trim()}"`);
+  }
+  if (roleBits.length) parts.push(roleBits.join(", "));
+
+  // 配色 / 调性 / 风格倾向。
+  if (c?.palette) parts.push(`color palette: ${c.palette.trim()}`);
+  if (c?.tone) parts.push(`mood: ${c.tone.trim()}`);
+  if (p.fourPack.styleId) parts.push(`visual style ref: ${p.fourPack.styleId}`);
+
+  // 画幅取向。
+  parts.push(aspectGuidance(p.aspect));
+
+  // 质量 + 硬约束：无文字/字母/水印（屏幕文字后续叠）。
+  parts.push(
+    "high quality, cohesive lighting, clean professional look, no text, no letters, no words, no captions, no watermark, no logo, no UI"
+  );
+
+  return parts.filter(Boolean).join(". ");
+}
+
+// 分镜草图：优先用 codex 出真图；VR_IMAGE=none / 失败 / 超时 → 退回 ffmpeg 纯色兜底。
+// 返回相对路径（不变），scene.draftImage 不变。
 export async function makeDraft(
   p: ProjectMeta,
   scene: SceneMeta
 ): Promise<string> {
-  const { w, h } = dims(p.aspect);
-  const hex = sceneColor(scene);
   const rel = `drafts/scene-${scene.index}.png`;
   const abs = path.join(draftsDir(p.projectId), `scene-${scene.index}.png`);
   fs.mkdirSync(draftsDir(p.projectId), { recursive: true });
+
+  try {
+    const prompt = buildDraftPrompt(p, scene);
+    await generateImage(prompt, abs);
+    return rel;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `[makeDraft] 第 ${scene.index} 镜出图失败，退回纯色兜底: ${msg}`
+    );
+    await makeDraftFallback(p, scene, abs);
+    return rel;
+  }
+}
+
+// 兜底：纯色 PNG 草图（旧实现，不使用 drawtext，文字由前端叠加）。
+async function makeDraftFallback(
+  p: ProjectMeta,
+  scene: SceneMeta,
+  abs: string
+): Promise<void> {
+  const { w, h } = dims(p.aspect);
+  const hex = sceneColor(scene);
   await run(ffmpegBin(), [
     "-y",
     "-f",
@@ -92,7 +174,6 @@ export async function makeDraft(
     "1",
     abs,
   ]);
-  return rel;
 }
 
 // 单镜正片段。VR_RENDER=engine（默认）→ 走 vibemotion 引擎真渲；stub → ffmpeg 纯色占位。
