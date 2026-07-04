@@ -124,7 +124,12 @@ function heuristicVisual(scene: SceneMeta): SceneVisual {
 }
 
 // 把（可能不完整的）visual 规整成引擎能直接渲的合法形状。
+// 重要：当 onScreenText 为空（如 hook 空拍镜），强制降为 bg-only 避免任何引擎模板把 role
+// 兒底显示上屏。
 function coerceVisual(scene: SceneMeta): SceneVisual {
+  if (!(scene.onScreenText || "").trim()) {
+    return { type: "bg-only" };
+  }
   let v: SceneVisual =
     scene.visual && VALID_VISUAL.has(scene.visual.type)
       ? { ...scene.visual }
@@ -172,11 +177,15 @@ function buildScenes(p: ProjectMeta): {
   ordered.forEach((s, i) => {
     const id = `s${String(i + 1).padStart(2, "0")}`;
     const dur = Math.max(0.5, s.durationSec || 4);
+    // 重要：不能将 role (如"钩子空拍") 作为 purpose 写入引擎——引擎模板会在
+    // onScreenText 为空时拿 purpose 兒底显示，导致“钩子空拍”四个字真的出在首镜屏幕上。
+    // 仅当 onScreenText 非空时才拉上 role 作为引擎内部提示（title 峰值需要时可取用）。
+    const engPurpose = (s.onScreenText || "").trim() ? s.role || "" : "";
     scenes.push({
       id,
       startSec: cursor,
       durationSec: dur,
-      purpose: s.role || "镜头",
+      purpose: engPurpose,
       vo: s.vo || "",
       onScreenText: s.onScreenText || "",
       visual: coerceVisual(s),
