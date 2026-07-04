@@ -46,7 +46,22 @@ scenesArr.forEach((s, i) => {
     id, startSec: cursor, durationSec: dur,
     purpose: engPurpose, vo: s.vo || "",
     onScreenText: s.onScreenText || "",
-    visual: !(s.onScreenText||"").trim() ? { type: "bg-only" } : (s.visual || { type: "kinetic-text" }),
+    // 把 AI 可能写进 value/subtitle 的描述性文本清掉（防“镜头描述”上屏）
+    visual: (() => {
+      if (!(s.onScreenText||"").trim()) return { type: "bg-only" };
+      const v = s.visual ? { ...s.visual } : { type: "kinetic-text" };
+      const desc = /实录|实拍|背景|画中画|镜头|画面|取景|处理|镜射|模拟|叠加|重叠|悬浮|字色|字体|充|无内容|红色|蓝色|颜色/;
+      const clean = t => (typeof t === 'string' && !desc.test(t)) ? t : undefined;
+      if (v.subtitle) v.subtitle = clean(v.subtitle);
+      if (v.value) {
+        if (v.type === 'stat') { if (!/\d/.test(v.value) || v.value.length > 12) v.value = undefined; }
+        else v.value = undefined;
+      }
+      if (v.term) v.term = clean(v.term);
+      if (v.definition) v.definition = clean(v.definition);
+      if (v.chapter?.title) v.chapter = { ...v.chapter, title: clean(v.chapter.title) };
+      return v;
+    })(),
     transitionIn,
     primaryMotion: s.primaryMotion || null,
     density: s.density || null,
@@ -62,8 +77,19 @@ const avgDur = scenesArr.length ? scenesArr.reduce((s,x)=>s+x.durationSec,0)/sce
 let motion = "balanced";
 if (/快切|punchy|高密/.test(pacing) || avgDur < 1.2) motion = "punchy";
 else if (/舒缓|克制|淡入淡出/.test(pacing) || avgDur > 2.2) motion = "calm";
-const style = { preset: p.fourPack?.styleId, palette: {bg:"#0B0B0F",fg:"#FFF",accent:["#5B9BFF"]},
-  fonts: {display:'"PingFang SC"',body:'"PingFang SC"'}, motion };
+// 从引擎预设读真实 palette (不能写硬黑底白字!)
+const enginePresetPath = path.resolve(os.homedir(), '.claude/skills/vibe-motion-video/presets/styles', `${p.fourPack.styleId}.json`);
+let palette = {bg:"#0B0B0F",fg:"#FFF",accent:["#5B9BFF"]};
+let fonts = {display:'"PingFang SC"',body:'"PingFang SC"'};
+if (fs.existsSync(enginePresetPath)) {
+  const preset = JSON.parse(fs.readFileSync(enginePresetPath, 'utf8'));
+  if (preset.palette) palette = preset.palette;
+  if (preset.fonts) fonts = preset.fonts;
+  console.log(`[render] palette from preset: bg=${palette.bg} fg=${palette.fg} accent=${palette.accent?.[0]}`);
+} else {
+  console.warn(`[render] preset not found: ${enginePresetPath}, 使用内置默认`);
+}
+const style = { preset: p.fourPack?.styleId, palette, fonts, motion };
 
 const config = {
   projectName: p.title, outputType: "showreel", platform: spec.platform,

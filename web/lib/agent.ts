@@ -419,24 +419,42 @@ const VISUAL_TYPES = new Set<EngineVisualType>([
 ]);
 
 // 解析 agent 给的 visual（宽松；非法/缺省返回 undefined，交 engine 启发式兜底）。
+// 描述性文本护栏(B7 后修): AI 常把导演描述("画中画实录"/"眼睛跟随鼠标")写入 value/subtitle,
+// 引擎直接上屏就是"镜头描述"字面显示. 一律丢弃.
+const DESC_HINT_RE = /实录|实拍|背景|画中画|镜头|画面|取景|处理|镜射|模拟|叠加|重叠|神色|处于|悬浮|字色|字体|留白|填充|字色/;
+function cleanTextField(s: string | undefined): string | undefined {
+  if (!s) return undefined;
+  const t = String(s).trim();
+  if (!t) return undefined;
+  if (DESC_HINT_RE.test(t)) return undefined;
+  if (/#[0-9A-Fa-f]{3,6}/.test(t) && /[\u4e00-\u9fa5]/.test(t)) return undefined;
+  return t;
+}
+
 function normalizeVisual(raw: unknown): SceneVisual | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const o = raw as Record<string, unknown>;
   const type = String(o.type ?? "").trim() as EngineVisualType;
   if (!VISUAL_TYPES.has(type)) return undefined;
   const v: SceneVisual = { type };
-  if (typeof o.subtitle === "string") v.subtitle = o.subtitle;
-  if (typeof o.value === "string") v.value = o.value;
-  if (Array.isArray(o.items)) v.items = o.items.map((x) => String(x)).slice(0, 4);
+  const cleanSub = cleanTextField(o.subtitle as string | undefined);
+  if (cleanSub) v.subtitle = cleanSub;
+  if (typeof o.value === "string") {
+    if (type === "stat") {
+      if (/\d/.test(o.value) && o.value.length <= 12) v.value = o.value.trim();
+    }
+    // 其他类型 value 一律丢弃(引擎会直接把 value 当大字上屏)
+  }
+  if (Array.isArray(o.items)) v.items = o.items.map((x) => String(x)).filter(Boolean).slice(0, 4);
   if (o.chapter && typeof o.chapter === "object") {
     const c = o.chapter as Record<string, unknown>;
     v.chapter = {
       num: c.num != null ? String(c.num) : undefined,
-      title: c.title != null ? String(c.title) : undefined,
+      title: cleanTextField(c.title != null ? String(c.title) : undefined),
     };
   }
-  if (typeof o.term === "string") v.term = o.term;
-  if (typeof o.definition === "string") v.definition = o.definition;
+  if (typeof o.term === "string") v.term = cleanTextField(o.term);
+  if (typeof o.definition === "string") v.definition = cleanTextField(o.definition);
   if (Array.isArray(o.points)) v.points = o.points.map((x) => String(x)).slice(0, 3);
   return v;
 }
