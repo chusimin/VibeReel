@@ -93,7 +93,7 @@ function NewProjectInner() {
   const [texts, setTexts] = useState<DraftText[]>([{ kind: "url", value: "https://acme.example.com" }]);
   const [codeFiles, setCodeFiles] = useState<File[]>([]);
   const [aspect, setAspect] = useState<Aspect>("16:9");
-  const [style, setStyle] = useState("editorial-saas");
+  const [style, setStyle] = useState("apple-keynote-light");
   const [customStyles, setCustomStyles] = useState<StylePack[]>([]);
   const [assetFiles, setAssetFiles] = useState<DraftAssetFile[]>([]);
   const [colors, setColors] = useState<DraftColor[]>([]);

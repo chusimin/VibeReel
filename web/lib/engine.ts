@@ -171,7 +171,7 @@ function buildScenes(p: ProjectMeta): {
   let cursor = 0;
   ordered.forEach((s, i) => {
     const id = `s${String(i + 1).padStart(2, "0")}`;
-    const dur = Math.max(1, Math.round(s.durationSec || 4));
+    const dur = Math.max(0.5, s.durationSec || 4);
     scenes.push({
       id,
       startSec: cursor,

@@ -32,7 +32,7 @@ export const STYLE_PACKS: StylePack[] = [
 ];
 
 const RECO: Record<VideoType, string[]> = {
-  showreel: ["editorial-saas", "apple-keynote-light", "alibaba-premium", "kinetic-type"],
+  showreel: ["apple-keynote-light", "editorial-saas", "alibaba-premium", "kinetic-type"],
   popsci: ["deep-space-diagram", "minimal-ink", "cool-mono"],
   teaching: ["apple-keynote-light", "bento", "editorial-serif"],
 };

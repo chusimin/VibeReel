@@ -183,25 +183,25 @@ export async function generateStoryboard(
     p.vo ? "本片需要配音（vo 必须填写口播文案）。" : "本片无配音（vo 留空字符串）。",
     opts?.note ? `用户打回意见（务必据此明显调整分镜内容）：${opts.note}` : "",
     "",
-    "请产出 4 到 6 个分镜。严格要求：只输出一个 JSON 数组，不要解释或 Markdown。",
+    "请产出 8 到 16 个分镜（motion graphics showreel 节奏：快切、高密度）。严格要求：只输出一个 JSON 数组，不要解释或 Markdown。",
     "每一项形如：",
     '{"index": 1, "role": "镜头作用(中文,如 钩子/讲解/证据/收束)", "durationSec": 4, "onScreenText": "屏幕主文字(中文,简短)", "vo": "配音文案(中文,无配音则空字符串)", "visual": {"type": "stat", "value": "24×"}, "refs": ["引用到的料块/素材id,如 m1"]}',
     VISUAL_CATALOG,
-    "refs 填这一镜引用的料块/素材 @id（没有就空数组）。index 从 1 开始连续递增；durationSec 取 3~6 的整数。全部中文。",
+    "refs 填这一镜引用的料块/素材 @id（没有就空数组）。index 从 1 开始连续递增；durationSec 取 0.6~1.8 的数（允许 1 位小数，showreel 头尾镜可放到 3~6s 做长 plate）。全部中文。",
   ]
     .filter(Boolean)
     .join("\n");
 
   const arr = await getJsonArray(prompt, p.model);
 
-  const scenes: SceneMeta[] = arr.slice(0, 6).map((item, i) => {
+  const scenes: SceneMeta[] = arr.slice(0, 16).map((item, i) => {
     const o = (item ?? {}) as Record<string, unknown>;
     const visual = normalizeVisual(o.visual);
     const dur = Number(o.durationSec);
     return {
       index: Number.isFinite(Number(o.index)) ? Number(o.index) : i + 1,
       role: String(o.role ?? "镜头"),
-      durationSec: Number.isFinite(dur) && dur > 0 ? Math.round(dur) : 4,
+      durationSec: Number.isFinite(dur) && dur > 0 ? Math.round(dur * 10) / 10 : 4,
       onScreenText: String(o.onScreenText ?? ""),
       vo: p.vo ? String(o.vo ?? "") : "",
       // renderer 仅作 UI 徽章；引擎真实渲染以 visual 为准。
