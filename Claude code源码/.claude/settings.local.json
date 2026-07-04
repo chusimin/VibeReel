@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Skill(browse)",
+      "Skill(browse:*)",
+      "Bash(export PATH=\"$HOME/.bun/bin:$PATH\")",
+      "Bash(B=~/.claude/skills/gstack/browse/dist/browse)",
+      "Bash($B goto:*)",
+      "Bash($B text:*)",
+      "Bash(ssh -o ConnectTimeout=5 -o BatchMode=yes -p 22 root@101.43.66.231 echo \"连接成功\")",
+      "Bash(sshpass -p 'tF]s82g^_SmH\\(5;x' ssh -o StrictHostKeyChecking=no -p 22 root@101.43.66.231 \"echo ''=== 连接成功 ==='' && hostname && uname -a && uptime && echo ''=== 磁盘使用 ==='' && df -h / && echo ''=== 内存使用 ==='' && free -h\")",
+      "Bash(ssh -v -o StrictHostKeyChecking=no -o BatchMode=yes -p 22 root@101.43.66.231)",
+      "Skill(gstack-upgrade)",
+      "Skill(gstack-upgrade:*)",
+      "WebFetch(domain:clawhub.ai)",
+      "Bash(pip3 show:*)",
+      "Bash(openclaw install:*)",
+      "Bash(openclaw --help)",
+      "Bash(openclaw skills:*)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -L -o getnote.zip \"https://wry-manatee-359.convex.site/api/v1/download?slug=getnote\")",
+      "Bash(unzip -o getnote.zip -d getnote_extracted)",
+      "Bash(obsidian help:*)",
+      "Read(//Users/mac/Desktop/**)",
+      "Bash(2)"
+    ]
+  }
+}

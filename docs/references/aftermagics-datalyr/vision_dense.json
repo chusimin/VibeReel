@@ -1,0 +1,448 @@
+[
+  {
+    "起始秒": 0.0,
+    "时长秒": 1.6,
+    "动作": "文字内容渐变切换，并着重显示部分单词",
+    "动效动词": [
+      "cross-fade",
+      "typewriter",
+      "color change"
+    ],
+    "构图变化": "不变",
+    "色彩变化": "换色",
+    "文字动作": "入场",
+    "转场发生": false,
+    "转场类型": "无",
+    "情绪": "克制",
+    "关键洞察": "通过文字的色彩变化和渐进显示来强调信息。",
+    "_ms": 2874,
+    "_tokens": {
+      "prompt_tokens": 3655,
+      "completion_tokens": 149,
+      "total_tokens": 3804,
+      "cost": 0.001469,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.001469,
+        "upstream_inference_prompt_cost": 0.0010965,
+        "upstream_inference_completions_cost": 0.0003725
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 1.6,
+    "时长秒": 1.6,
+    "动作": "元素入场后，文字和连接线出现，展现层级关系",
+    "动效动词": [
+      "fade in",
+      "slide",
+      "mask",
+      "reveal"
+    ],
+    "构图变化": "不变",
+    "色彩变化": "不变",
+    "文字动作": "入场",
+    "转场发生": false,
+    "转场类型": "无",
+    "情绪": "克制",
+    "关键洞察": "通过元素渐入和线条连接，清晰展示信息层级",
+    "_ms": 5656,
+    "_tokens": {
+      "prompt_tokens": 3655,
+      "completion_tokens": 152,
+      "total_tokens": 3807,
+      "cost": 0.0014765,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0014765,
+        "upstream_inference_prompt_cost": 0.0010965,
+        "upstream_inference_completions_cost": 0.00038
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 3.2,
+    "时长秒": 1.6,
+    "动作": "新的数据块平滑地出现，并与上方数据块连接",
+    "动效动词": [
+      "slide",
+      "fade"
+    ],
+    "构图变化": "不变",
+    "色彩变化": "换色",
+    "文字动作": "静止",
+    "转场发生": false,
+    "转场类型": "无",
+    "情绪": "克制",
+    "关键洞察": "通过平滑的出现和颜色变化，清晰展示数据流转过程",
+    "_ms": 2809,
+    "_tokens": {
+      "prompt_tokens": 3655,
+      "completion_tokens": 147,
+      "total_tokens": 3802,
+      "cost": 0.001464,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.001464,
+        "upstream_inference_prompt_cost": 0.0010965,
+        "upstream_inference_completions_cost": 0.0003675
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 4.8,
+    "时长秒": 1.6,
+    "动作": "原画面元素淡出，新画面从顶部滑入并完全显示",
+    "动效动词": [
+      "fade out",
+      "slide",
+      "reveal"
+    ],
+    "构图变化": "剧变",
+    "色彩变化": "不变",
+    "文字动作": "入场",
+    "转场发生": true,
+    "转场类型": "擦除",
+    "情绪": "激昂",
+    "关键洞察": "画面内容由下至上整体替换，营造流畅感",
+    "_ms": 2968,
+    "_tokens": {
+      "prompt_tokens": 3655,
+      "completion_tokens": 160,
+      "total_tokens": 3815,
+      "cost": 0.0014965,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0014965,
+        "upstream_inference_prompt_cost": 0.0010965,
+        "upstream_inference_completions_cost": 0.0004
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 6.4,
+    "时长秒": 1.6,
+    "动作": "元素从左侧滑入，同时背景图模糊淡出",
+    "动效动词": [
+      "slide",
+      "blur",
+      "fade"
+    ],
+    "构图变化": "移动",
+    "色彩变化": "暗变明",
+    "文字动作": "入场",
+    "转场发生": false,
+    "转场类型": "无",
+    "情绪": "克制",
+    "关键洞察": "通过模糊背景图和新元素滑入突出重点",
+    "_ms": 2731,
+    "_tokens": {
+      "prompt_tokens": 3655,
+      "completion_tokens": 146,
+      "total_tokens": 3801,
+      "cost": 0.0014615,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0014615,
+        "upstream_inference_prompt_cost": 0.0010965,
+        "upstream_inference_completions_cost": 0.000365
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 8.0,
+    "时长秒": 1.6,
+    "动作": "橙色矩形块在淡入并向右伸展，内容逐渐显现",
+    "动效动词": [
+      "fade-in",
+      "slide",
+      "typewriter"
+    ],
+    "构图变化": "不变",
+    "色彩变化": "不变",
+    "文字动作": "入场",
+    "转场发生": false,
+    "转场类型": "无",
+    "情绪": "克制",
+    "关键洞察": "通过文字的伸展和显现，引导观众视线",
+    "_ms": 3064,
+    "_tokens": {
+      "prompt_tokens": 3655,
+      "completion_tokens": 154,
+      "total_tokens": 3809,
+      "cost": 0.0014815,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0014815,
+        "upstream_inference_prompt_cost": 0.0010965,
+        "upstream_inference_completions_cost": 0.000385
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 9.6,
+    "时长秒": 1.6,
+    "动作": "页面元素渐隐、背景色变化，圆形图案出现并缩放",
+    "动效动词": [
+      "fade",
+      "scale",
+      "mask"
+    ],
+    "构图变化": "剧变",
+    "色彩变化": "明变暗",
+    "文字动作": "出场",
+    "转场发生": true,
+    "转场类型": "mask reveal",
+    "情绪": "激昂",
+    "关键洞察": "通过强对比的色彩和剧烈变化塑造动感与活力",
+    "_ms": 2891,
+    "_tokens": {
+      "prompt_tokens": 3655,
+      "completion_tokens": 151,
+      "total_tokens": 3806,
+      "cost": 0.001474,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.001474,
+        "upstream_inference_prompt_cost": 0.0010965,
+        "upstream_inference_completions_cost": 0.0003775
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 11.2,
+    "时长秒": 1.6,
+    "动作": "背景由黑变白并带有橙色渐变，同时Datalyr Logo及文字显现，底部副标题出现。",
+    "动效动词": [
+      "blur",
+      "fade in",
+      "typewriter",
+      "slide"
+    ],
+    "构图变化": "不变",
+    "色彩变化": "暗变明",
+    "文字动作": "入场",
+    "转场发生": true,
+    "转场类型": "mask reveal",
+    "情绪": "激昂",
+    "关键洞察": "Logo和部分文字以渐变方式融入背景，自然且引人入胜。",
+    "_ms": 2836,
+    "_tokens": {
+      "prompt_tokens": 3656,
+      "completion_tokens": 172,
+      "total_tokens": 3828,
+      "cost": 0.0015268,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0015268,
+        "upstream_inference_prompt_cost": 0.0010968,
+        "upstream_inference_completions_cost": 0.00043
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 12.8,
+    "时长秒": 1.6,
+    "动作": "文字从右侧滑入并出现",
+    "动效动词": [
+      "slide",
+      "typewriter"
+    ],
+    "构图变化": "不变",
+    "色彩变化": "不变",
+    "文字动作": "入场",
+    "转场发生": false,
+    "转场类型": "无",
+    "情绪": "克制",
+    "关键洞察": "通过文字的逐字打出和平滑入场，展现内容补充和延展。",
+    "_ms": 3582,
+    "_tokens": {
+      "prompt_tokens": 3656,
+      "completion_tokens": 145,
+      "total_tokens": 3801,
+      "cost": 0.0014593,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0014593,
+        "upstream_inference_prompt_cost": 0.0010968,
+        "upstream_inference_completions_cost": 0.0003625
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 14.4,
+    "时长秒": 1.6,
+    "动作": "底部文字逐字显示并移动",
+    "动效动词": [
+      "typewriter",
+      "slide"
+    ],
+    "构图变化": "不变",
+    "色彩变化": "不变",
+    "文字动作": "入场",
+    "转场发生": false,
+    "转场类型": "无",
+    "情绪": "克制",
+    "关键洞察": "底部文字的移动与逐字显示结合，创造连贯感",
+    "_ms": 2705,
+    "_tokens": {
+      "prompt_tokens": 3656,
+      "completion_tokens": 140,
+      "total_tokens": 3796,
+      "cost": 0.0014468,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0014468,
+        "upstream_inference_prompt_cost": 0.0010968,
+        "upstream_inference_completions_cost": 0.00035
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "起始秒": 16.0,
+    "时长秒": 1.6,
+    "动作": "页面内容保持静止，没有任何变化。",
+    "动效动词": [],
+    "构图变化": "不变",
+    "色彩变化": "不变",
+    "文字动作": "静止",
+    "转场发生": false,
+    "转场类型": "无",
+    "情绪": "克制",
+    "关键洞察": "此段画面内容完全静止，没有任何动画效果。",
+    "_ms": 2746,
+    "_tokens": {
+      "prompt_tokens": 3656,
+      "completion_tokens": 132,
+      "total_tokens": 3788,
+      "cost": 0.0014268,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0014268,
+        "upstream_inference_prompt_cost": 0.0010968,
+        "upstream_inference_completions_cost": 0.00033
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  }
+]

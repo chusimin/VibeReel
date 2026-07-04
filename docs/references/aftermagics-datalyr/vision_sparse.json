@@ -1,0 +1,685 @@
+[
+  {
+    "描述": "米白色渐变背景上，黑橙色英文单词排版。",
+    "主要元素": [
+      "英文单词",
+      "渐变背景"
+    ],
+    "构图": "居中",
+    "色彩": "米白+淡橙+黑+橙",
+    "文字": "in under",
+    "视觉密度": "极简",
+    "关键点": "居中排版的英文单词",
+    "sec": 1,
+    "_ms": 2335,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 103,
+      "total_tokens": 2069,
+      "cost": 0.0008473,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008473,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.0002575
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "画面主体是“in under three minutes”的文字展示。",
+    "主要元素": [
+      "文字"
+    ],
+    "构图": "居中",
+    "色彩": "浅米色+淡橙",
+    "文字": "in under three minutes",
+    "视觉密度": "极简",
+    "关键点": "居中排版的文字，简洁明了。",
+    "sec": 2,
+    "_ms": 2183,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 97,
+      "total_tokens": 2063,
+      "cost": 0.0008323,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008323,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.0002425
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "一个通知框和连接线，下方有模糊的元素",
+    "主要元素": [
+      "通知框",
+      "连接线",
+      "模糊元素"
+    ],
+    "构图": "居中",
+    "色彩": "浅橙+米白",
+    "文字": "New Visitor",
+    "视觉密度": "极简",
+    "关键点": "通知框及其关联的动态连接线",
+    "sec": 3,
+    "_ms": 2377,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 100,
+      "total_tokens": 2066,
+      "cost": 0.0008398,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008398,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.00025
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "两个带有文字和图标的流程框通过线条连接。",
+    "主要元素": [
+      "流程框",
+      "连接线",
+      "文字",
+      "图标"
+    ],
+    "构图": "三分",
+    "色彩": "浅橙色+白色",
+    "文字": "Visitor Identified\nUser Signed Up",
+    "视觉密度": "中",
+    "关键点": "两个连接的流程框及其中的文字图标",
+    "sec": 4,
+    "_ms": 2148,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 107,
+      "total_tokens": 2073,
+      "cost": 0.0008573,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008573,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.0002675
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "两个流程图节点与连接线，背景渐变。",
+    "主要元素": [
+      "流程图节点",
+      "连接线",
+      "文字",
+      "图标"
+    ],
+    "构图": "居中",
+    "色彩": "橙色+米白",
+    "文字": "User Signed Up, Subscription Started",
+    "视觉密度": "中",
+    "关键点": "两个颜色和内容不同的流程图节点",
+    "sec": 5,
+    "_ms": 2121,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 107,
+      "total_tokens": 2073,
+      "cost": 0.0008573,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008573,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.0002675
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "展示了应用订阅和转化回传的流程图。",
+    "主要元素": [
+      "流程图节点",
+      "图标"
+    ],
+    "构图": "居中",
+    "色彩": "橙色+米白",
+    "文字": "Subscription Started, Conversion Postback",
+    "视觉密度": "中",
+    "关键点": "居中排列的流程图节点和连接线",
+    "sec": 6,
+    "_ms": 2370,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 101,
+      "total_tokens": 2067,
+      "cost": 0.0008423,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008423,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.0002525
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "流程图显示用户旅程和订阅事件",
+    "主要元素": [
+      "流程图节点",
+      "连接线",
+      "图标",
+      "文字"
+    ],
+    "构图": "居中",
+    "色彩": "暖橙+米白",
+    "文字": "New Visitor, Visitor Identified, User Signed Up, Subscription Started, Conversion Postback",
+    "视觉密度": "中",
+    "关键点": "Subscription Started 节点突出显示",
+    "sec": 7,
+    "_ms": 2370,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 113,
+      "total_tokens": 2079,
+      "cost": 0.0008723,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008723,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.0002825
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "一个流程图展示用户旅程和数据联结。",
+    "主要元素": [
+      "流程图",
+      "矩形标签",
+      "Connects按钮"
+    ],
+    "构图": "居中",
+    "色彩": "橙色+米白",
+    "文字": "Connects, New Visitor, Visitor Identified, User Signed Up, Subscription Started, Conversion Postback",
+    "视觉密度": "中",
+    "关键点": "左侧亮橙色的“Connects”按钮",
+    "sec": 8,
+    "_ms": 2557,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 121,
+      "total_tokens": 2087,
+      "cost": 0.0008923,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008923,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.0003025
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "流程图显示数据流和事件映射关系。",
+    "主要元素": [
+      "流程图",
+      "标题",
+      "图标"
+    ],
+    "构图": "居中",
+    "色彩": "橙色+米白",
+    "文字": "New Visitor, Visitor Identified, User Signed Up, Connects, Map Events, Subscription Started, Conversion Postback",
+    "视觉密度": "中",
+    "关键点": "居中用亮橙色突出的“Connects”和“Map Events”字样",
+    "sec": 9,
+    "_ms": 2449,
+    "_tokens": {
+      "prompt_tokens": 1966,
+      "completion_tokens": 127,
+      "total_tokens": 2093,
+      "cost": 0.0009073,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0009073,
+        "upstream_inference_prompt_cost": 0.0005898,
+        "upstream_inference_completions_cost": 0.0003175
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "一个橙色的流程图，展示数据流或用户行为路径。",
+    "主要元素": [
+      "流程图",
+      "文本框",
+      "连接线"
+    ],
+    "构图": "居中",
+    "色彩": "橙色+米白",
+    "文字": "New Visitor, Visitor Identified, User Signed Up, Connects, Map Events, Send Postbacks, Subscription Started, Conversion Postback",
+    "视觉密度": "中",
+    "关键点": "居中醒目显示的主要橙色流程区块",
+    "sec": 10,
+    "_ms": 3106,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 128,
+      "total_tokens": 2095,
+      "cost": 0.0009101,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0009101,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.00032
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "一个带有抽象徽标的橙色圆形图标在黑色背景上",
+    "主要元素": [
+      "圆形图标",
+      "抽象徽标",
+      "背景"
+    ],
+    "构图": "居中",
+    "色彩": "暖橙+米白+黑",
+    "文字": "",
+    "视觉密度": "极简",
+    "关键点": "居中且带有渐变的橙色圆形图标",
+    "sec": 11,
+    "_ms": 2107,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 105,
+      "total_tokens": 2072,
+      "cost": 0.0008526,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008526,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.0002625
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "橙色渐变背景中，品牌logo和文字“Data”并列。",
+    "主要元素": [
+      "品牌logo",
+      "文字"
+    ],
+    "构图": "居中",
+    "色彩": "橙色+米白",
+    "文字": "Data",
+    "视觉密度": "极简",
+    "关键点": "居中透明风格品牌logo和文字",
+    "sec": 12,
+    "_ms": 2087,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 100,
+      "total_tokens": 2067,
+      "cost": 0.0008401,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008401,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.00025
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "公司Logo和名称，背景暖色渐变",
+    "主要元素": [
+      "Logo",
+      "公司名称",
+      "渐变背景"
+    ],
+    "构图": "居中",
+    "色彩": "暖橙+米白",
+    "文字": "Datalyr",
+    "视觉密度": "极简",
+    "关键点": "Logo和公司名称在画面中央，简洁醒目",
+    "sec": 13,
+    "_ms": 2322,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 104,
+      "total_tokens": 2071,
+      "cost": 0.0008501,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008501,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.00026
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "Datalyr公司Logo与宣传语，背景有浅色点状纹理。",
+    "主要元素": [
+      "公司Logo",
+      "公司名称",
+      "宣传语",
+      "背景纹理"
+    ],
+    "构图": "居中",
+    "色彩": "米白+橙色",
+    "文字": "DatalyrFaster insightsBetter",
+    "视觉密度": "极简",
+    "关键点": "居中显示的Datalyr Logo和品牌名",
+    "sec": 14,
+    "_ms": 2391,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 118,
+      "total_tokens": 2085,
+      "cost": 0.0008851,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008851,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.000295
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "一个品牌Logo、名称和两句短语居中展示。",
+    "主要元素": [
+      "品牌Logo",
+      "品牌名称",
+      "短语"
+    ],
+    "构图": "居中",
+    "色彩": "米白+橙",
+    "文字": "Datalyr, Faster insights, Better decisions",
+    "视觉密度": "极简",
+    "关键点": "品牌Logo和名称",
+    "sec": 15,
+    "_ms": 2087,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 105,
+      "total_tokens": 2072,
+      "cost": 0.0008526,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008526,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.0002625
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "一个公司徽标、名称和其口号",
+    "主要元素": [
+      "徽标",
+      "文字",
+      "背景图案"
+    ],
+    "构图": "居中",
+    "色彩": "米白+橙色",
+    "文字": "Dataylr Faster insights Better decisions Get started at Datalyr.com",
+    "视觉密度": "极简",
+    "关键点": "徽标和公司名称",
+    "sec": 16,
+    "_ms": 2348,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 109,
+      "total_tokens": 2076,
+      "cost": 0.0008626,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008626,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.0002725
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "公司Logo、名称和宣传语居中展示。",
+    "主要元素": [
+      "公司Logo",
+      "公司名称",
+      "宣传语"
+    ],
+    "构图": "居中",
+    "色彩": "灰白+橙",
+    "文字": "Datayr Faster insights Better decisions Get started at Datayr.com",
+    "视觉密度": "极简",
+    "关键点": "公司Logo和名称",
+    "sec": 17,
+    "_ms": 2856,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 106,
+      "total_tokens": 2073,
+      "cost": 0.0008551,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008551,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.000265
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "描述": "公司Logo与口号展示",
+    "主要元素": [
+      "Logo",
+      "公司名称",
+      "口号"
+    ],
+    "构图": "居中",
+    "色彩": "米白+橙色",
+    "文字": "Dataylr Faster insights Better decisions Get started at Datalyr.com",
+    "视觉密度": "极简",
+    "关键点": "居中偏上的公司Logo和名称",
+    "sec": 18,
+    "_ms": 2164,
+    "_tokens": {
+      "prompt_tokens": 1967,
+      "completion_tokens": 108,
+      "total_tokens": 2075,
+      "cost": 0.0008601,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0008601,
+        "upstream_inference_prompt_cost": 0.0005901,
+        "upstream_inference_completions_cost": 0.00027
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  }
+]
