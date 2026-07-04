@@ -73,8 +73,27 @@ const DEFAULT_FONTS = {
 
 // 风格 → 引擎 config.style：内置风格给 preset（引擎读 presets/styles/<id>.json 取全套），
 // 自定义风格直接喂合并后的 palette/fonts（引擎对缺 preset 容错）。
-function styleConfig(styleId: string) {
-  const pack = resolveStyle(styleId);
+// motion 不再硬编码：从 concept.pacing / storyboard 平均镜时长 推断。
+function inferMotion(p: ProjectMeta): "calm" | "balanced" | "punchy" {
+  const c =
+    p.chosenConcept != null && p.concepts[p.chosenConcept]
+      ? p.concepts[p.chosenConcept]
+      : undefined;
+  const pacing = (c?.pacing || "").toLowerCase();
+  if (/快切|punchy|高密|强烈|硬切/.test(pacing)) return "punchy";
+  if (/舒缓|克制|慢|淡入淡出|calm/.test(pacing)) return "calm";
+  // 经验默认：看平均镜时长
+  if (p.scenes.length > 0) {
+    const avg =
+      p.scenes.reduce((s, x) => s + (x.durationSec || 0), 0) / p.scenes.length;
+    if (avg < 1.2) return "punchy";
+    if (avg > 2.2) return "calm";
+  }
+  return "balanced";
+}
+
+function styleConfig(p: ProjectMeta) {
+  const pack = resolveStyle(p.fourPack.styleId);
   const builtin = pack && !pack.custom;
   const palette = pack
     ? { bg: pack.bg, fg: pack.fg, accent: [pack.accent] }
@@ -83,10 +102,10 @@ function styleConfig(styleId: string) {
     ? { display: pack.font, body: pack.font }
     : DEFAULT_FONTS;
   return {
-    ...(builtin ? { preset: styleId } : {}),
+    ...(builtin ? { preset: p.fourPack.styleId } : {}),
     palette,
     fonts,
-    motion: "balanced" as const,
+    motion: inferMotion(p),
   };
 }
 
@@ -181,6 +200,14 @@ function buildScenes(p: ProjectMeta): {
     // onScreenText 为空时拿 purpose 兒底显示，导致“钩子空拍”四个字真的出在首镜屏幕上。
     // 仅当 onScreenText 非空时才拉上 role 作为引擎内部提示（title 峰值需要时可取用）。
     const engPurpose = (s.onScreenText || "").trim() ? s.role || "" : "";
+    // B4: 把 AI 声明的 primaryMotion 写入引擎 scene（引擎未来可读取、现在至少不丢。
+    // transitionIn 同时推断：首镜 fade 入场，其余镜优先用 AI 的 primaryMotion（属于 cross-fade/slide/fade 三中一）
+    const pm = (s.primaryMotion || "").toLowerCase();
+    let transitionIn: string;
+    if (i === 0) transitionIn = "fade";
+    else if (pm === "slide") transitionIn = "slide";
+    else if (pm === "cross-fade") transitionIn = "cross-fade";
+    else transitionIn = "fade";
     scenes.push({
       id,
       startSec: cursor,
@@ -189,7 +216,11 @@ function buildScenes(p: ProjectMeta): {
       vo: s.vo || "",
       onScreenText: s.onScreenText || "",
       visual: coerceVisual(s),
-      transitionIn: i === 0 ? "fade" : "fade",
+      transitionIn,
+      // 手尾字段：现在引擎不读也不报错，后续引擎支持时 zero-touch 就能接
+      primaryMotion: s.primaryMotion || null,
+      density: s.density || null,
+      isDropShot: s.isDropShot === true,
     });
     chunks.push({
       index: i, // 一镜一段（与引擎样例一致）
@@ -215,7 +246,7 @@ function buildConfig(p: ProjectMeta, total: number): Record<string, unknown> {
     durationTargetSec: Math.max(3, total),
     chunkSec: 15,
     language: "zh-CN",
-    style: styleConfig(p.fourPack.styleId),
+    style: styleConfig(p),
     voiceover: { enabled: false, provider: "none" }, // POC 暂不接 TTS
     captions: { enabled: false, style: "line", burnIn: false },
   };

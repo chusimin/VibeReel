@@ -40,20 +40,30 @@ scenesArr.forEach((s, i) => {
   const id = `s${String(i+1).padStart(2,"0")}`;
   const dur = Math.max(0.5, s.durationSec || 4);
   const engPurpose = (s.onScreenText || "").trim() ? s.role || "" : "";
+  const pm = (s.primaryMotion || "").toLowerCase();
+  const transitionIn = i === 0 ? "fade" : (pm === "slide" ? "slide" : pm === "cross-fade" ? "cross-fade" : "fade");
   engScenes.push({
     id, startSec: cursor, durationSec: dur,
     purpose: engPurpose, vo: s.vo || "",
     onScreenText: s.onScreenText || "",
-    // 空文本镜强制 bg-only,避免引擎拿 purpose 兒底
     visual: !(s.onScreenText||"").trim() ? { type: "bg-only" } : (s.visual || { type: "kinetic-text" }),
-    transitionIn: "fade",
+    transitionIn,
+    primaryMotion: s.primaryMotion || null,
+    density: s.density || null,
+    isDropShot: s.isDropShot === true,
   });
   chunks.push({ index: i, sceneIds: [id], startSec: cursor, durationSec: dur, status: "pending" });
   cursor += dur;
 });
 
+// motion 从 pacing 推断
+const pacing = ((p.concepts?.[p.chosenConcept ?? 0]?.pacing) || "").toLowerCase();
+const avgDur = scenesArr.length ? scenesArr.reduce((s,x)=>s+x.durationSec,0)/scenesArr.length : 1.5;
+let motion = "balanced";
+if (/快切|punchy|高密/.test(pacing) || avgDur < 1.2) motion = "punchy";
+else if (/舒缓|克制|淡入淡出/.test(pacing) || avgDur > 2.2) motion = "calm";
 const style = { preset: p.fourPack?.styleId, palette: {bg:"#0B0B0F",fg:"#FFF",accent:["#5B9BFF"]},
-  fonts: {display:'"PingFang SC"',body:'"PingFang SC"'}, motion:"balanced" };
+  fonts: {display:'"PingFang SC"',body:'"PingFang SC"'}, motion };
 
 const config = {
   projectName: p.title, outputType: "showreel", platform: spec.platform,
