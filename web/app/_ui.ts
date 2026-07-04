@@ -112,18 +112,30 @@ export const api = {
     );
   },
   // 项目素材：文件型（image/logo/clip）。
-  uploadAsset(id: string, file: File, kind = "image", note?: string) {
+  uploadAsset(
+    id: string,
+    file: File,
+    kind = "image",
+    note?: string,
+    usage?: "must-appear" | "may-use" | "tone-only"
+  ) {
     const fd = new FormData();
     fd.append("file", file);
     fd.append("kind", kind);
     if (note) fd.append("note", note);
+    if (usage) fd.append("usage", usage);
     return this.postForm<{ ok: boolean; asset: AssetItem }>(
       `/api/projects/${id}/assets`,
       fd
     );
   },
   // 项目素材：非文件型（color / font）。
-  addAssetMeta(id: string, body: { kind: "color" | "font"; ref: string; name?: string }) {
+  addAssetMeta(id: string, body: {
+    kind: "color" | "font";
+    ref: string;
+    name?: string;
+    usage?: "must-appear" | "may-use" | "tone-only";
+  }) {
     return this.post<{ ok: boolean; asset: AssetItem }>(
       `/api/projects/${id}/assets`,
       body

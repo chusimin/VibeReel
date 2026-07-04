@@ -80,12 +80,19 @@ export interface Material {
 // ---- #1 素材库（项目级）：图 / logo / 片段 / 色 / 字体 ----
 export type AssetKind = "image" | "logo" | "clip" | "color" | "font";
 
+// B7: 用途标签——决定 Agent 如何对待上传素材。
+//   must-appear: 必现。Agent 必须为它至少派一镜。
+//   may-use:     可参考。合适就用。
+//   tone-only:   只影响基调（颜色/氛围），不直接入镜。
+export type AssetUsage = "must-appear" | "may-use" | "tone-only";
+
 export interface AssetItem {
   id: string;
   name: string;
   kind: AssetKind;
   ref: string; // 文件相对路径（assets/xxx）或色值/字体名
   note?: string;
+  usage?: AssetUsage; // 默认 may-use（旧数据兼容）
 }
 
 // ---- #1 角色 / 品牌库（跨项目复用，存全局 library）----

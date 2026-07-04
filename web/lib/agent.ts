@@ -1,6 +1,7 @@
 // 创意 Agent 业务层 —— 只依赖独立的 llm.complete()，不关心底层是 CLI 还是 API。
 // 喂料分三层：① 拆解后的料块(@id 可引用) ② 项目素材库 ③ 角色/品牌库。
 import type {
+  AssetItem,
   Concept,
   EngineVisualType,
   ProjectMeta,
@@ -69,11 +70,37 @@ async function materialBlock(p: ProjectMeta): Promise<string> {
   }
 
   // ② 项目素材库（#1）：图/logo/色/字体，提示 agent 可在分镜里点名引用。
+  // B7: 按 usage 分层，不同标签对 Agent 含义不同。
   if (p.assets && p.assets.length > 0) {
-    const lines = p.assets.map(
-      (a) => `@${a.id} [${a.kind}] ${a.name}${a.note ? `（${a.note}）` : ""}`
-    );
-    sections.push(["【可用素材（用 @id 指代，推拉镜可点名）】", ...lines].join("\n"));
+    const must = p.assets.filter((a) => a.usage === "must-appear");
+    const may = p.assets.filter((a) => !a.usage || a.usage === "may-use");
+    const tone = p.assets.filter((a) => a.usage === "tone-only");
+    const brief = (a: AssetItem) =>
+      `@${a.id} [${a.kind}] ${a.name}${a.note ? `（${a.note}）` : ""}`;
+    if (must.length) {
+      sections.push(
+        [
+          "【必现素材（每一个必须在分镜中至少出现一镜，refs 里点名对应 @id）】",
+          ...must.map(brief),
+        ].join("\n")
+      );
+    }
+    if (may.length) {
+      sections.push(
+        [
+          "【可参考素材（合适时可以引用，不强要求）】",
+          ...may.map(brief),
+        ].join("\n")
+      );
+    }
+    if (tone.length) {
+      sections.push(
+        [
+          "【仅基调参考（不直接入镜，只影响 concept.palette / 氛围）】",
+          ...tone.map(brief),
+        ].join("\n")
+      );
+    }
   }
 
   // ③ 角色/品牌库（#1）：跨项目复用的品牌/角色设定。
@@ -285,13 +312,13 @@ export async function generateStoryboard(
   });
 
   // B2：硬校验——命中致命反例就报错，让用户重来（Q3=a 严格模式）。
-  validateStoryboard(scenes);
+  validateStoryboard(scenes, p);
 
   return scenes;
 }
 
 // ---- 硬校验（命中致命反例报错，前端展示、用户重新触发）----
-function validateStoryboard(scenes: SceneMeta[]): void {
+function validateStoryboard(scenes: SceneMeta[], p: ProjectMeta): void {
   const errs: string[] = [];
 
   // R 镜数：必须 12-16 之间
@@ -343,6 +370,18 @@ function validateStoryboard(scenes: SceneMeta[]): void {
   const drops = scenes.filter((s) => s.isDropShot);
   if (drops.length > 1) {
     errs.push(`isDropShot 镜 ${drops.length} 个 > 1`);
+  }
+
+  // B7: must-appear 素材必须在某一镜的 refs 里出现至少一次
+  const mustAssets = (p.assets || []).filter((a) => a.usage === "must-appear");
+  if (mustAssets.length > 0) {
+    const allRefs = new Set<string>();
+    for (const s of scenes) for (const r of s.refs || []) allRefs.add(r);
+    for (const a of mustAssets) {
+      if (!allRefs.has(a.id)) {
+        errs.push(`必现素材 @${a.id}(${a.name}) 未在任何分镜 refs 中被引用`);
+      }
+    }
   }
 
   if (errs.length > 0) {

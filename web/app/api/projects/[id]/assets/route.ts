@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import type { AssetItem, AssetKind } from "@/lib/types";
+import type { AssetItem, AssetKind, AssetUsage } from "@/lib/types";
 import { assetsDir, getProject, saveProject } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -34,9 +34,18 @@ export async function POST(
 
   const ctype = req.headers.get("content-type") || "";
 
+  const validUsage = (u: unknown): AssetUsage =>
+    u === "must-appear" || u === "tone-only" ? u : "may-use";
+
   // ---- 非文件型素材：color / font ----
   if (ctype.includes("application/json")) {
-    let body: { kind?: AssetKind; ref?: string; name?: string; note?: string };
+    let body: {
+      kind?: AssetKind;
+      ref?: string;
+      name?: string;
+      note?: string;
+      usage?: AssetUsage;
+    };
     try {
       body = (await req.json()) as typeof body;
     } catch {
@@ -54,6 +63,7 @@ export async function POST(
       kind: body.kind,
       ref: body.ref,
       note: body.note,
+      usage: validUsage(body.usage),
     };
     p.assets.push(asset);
     saveProject(p);
@@ -78,6 +88,7 @@ export async function POST(
     ? (kindRaw as AssetKind)
     : "image";
   const note = form.get("note") ? String(form.get("note")) : undefined;
+  const usage = validUsage(form.get("usage"));
 
   const id = assetId();
   const stored = `${id}-${safeName(file.name)}`;
@@ -91,6 +102,7 @@ export async function POST(
     kind,
     ref: `assets/${stored}`,
     note,
+    usage,
   };
   p.assets.push(asset);
   saveProject(p);

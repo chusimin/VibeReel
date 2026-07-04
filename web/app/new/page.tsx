@@ -74,7 +74,7 @@ function Section({ title, desc, children }: { title: string; desc?: string; chil
 }
 
 interface DraftText { kind: "url" | "idea"; value: string; }
-interface DraftAssetFile { file: File; url: string; }
+interface DraftAssetFile { file: File; url: string; usage: "must-appear" | "may-use" | "tone-only"; }
 interface DraftColor { ref: string; name: string; }
 
 export default function NewProjectPage() {
@@ -126,7 +126,20 @@ function NewProjectInner() {
   function rmCode(i: number) { setCodeFiles(codeFiles.filter((_, idx) => idx !== i)); }
   function addAssetFiles(files: FileList | null) {
     if (!files) return;
-    setAssetFiles([...assetFiles, ...Array.from(files).map((file) => ({ file, url: URL.createObjectURL(file) }))]);
+    // B7: 默认标为 must-appear（小白上传就是想入镜）
+    setAssetFiles([
+      ...assetFiles,
+      ...Array.from(files).map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+        usage: "must-appear" as const,
+      })),
+    ]);
+  }
+  function setAssetUsage(i: number, usage: DraftAssetFile["usage"]) {
+    setAssetFiles(
+      assetFiles.map((a, idx) => (idx === i ? { ...a, usage } : a))
+    );
   }
   function rmAsset(i: number) { setAssetFiles(assetFiles.filter((_, idx) => idx !== i)); }
   function addColor() { setColors([...colors, { ref: "#5B9BFF", name: "品牌色" }]); }
@@ -147,8 +160,8 @@ function NewProjectInner() {
     }
     const { id } = await api.createProject({ videoType: type, inputs, aspect, styleId: style, roleRefs, voiceover, subtitle, autostart: false });
     for (const f of codeFiles) await api.addInputFile(id, f);
-    for (const a of assetFiles) await api.uploadAsset(id, a.file, a.file.type.includes("svg") ? "logo" : "image");
-    for (const c of colors) await api.addAssetMeta(id, { kind: "color", ref: c.ref, name: c.name });
+    for (const a of assetFiles) await api.uploadAsset(id, a.file, a.file.type.includes("svg") ? "logo" : "image", undefined, a.usage);
+    for (const c of colors) await api.addAssetMeta(id, { kind: "color", ref: c.ref, name: c.name, usage: "tone-only" });
     if (autostart) await api.start(id);
     return id;
   }
@@ -307,6 +320,16 @@ function NewProjectInner() {
                         <span className="corner" onClick={() => rmAsset(i)} style={{ cursor: "pointer", top: 6, right: 6, left: "auto" }}>✕</span>
                       </div>
                       <span className="aux" style={{ textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.file.name}</span>
+                      <select
+                        value={a.usage}
+                        onChange={(e) => setAssetUsage(i, e.target.value as DraftAssetFile["usage"])}
+                        style={{ fontSize: 11, padding: "2px 4px", background: "var(--bg-2)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 4 }}
+                        title="这个素材在视频里怎么用"
+                      >
+                        <option value="must-appear">必现</option>
+                        <option value="may-use">可参考</option>
+                        <option value="tone-only">仅基调</option>
+                      </select>
                     </div>
                   ))}
                 </div>
