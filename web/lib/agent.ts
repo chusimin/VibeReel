@@ -11,9 +11,27 @@ import type {
 import { complete } from "@/lib/llm";
 import { gatherMaterial } from "@/lib/ingest";
 import { chunksBlock } from "@/lib/decompose";
-import { describeRoles } from "@/lib/library";
+import { describeRoles, resolveStyle } from "@/lib/library";
 import { extractJson } from "@/lib/json";
 import { skillBlockFor } from "@/lib/skills";
+
+// 把用户选定的 styleId 翻译成能嗂给 AI 的文本（bg/fg/accent + label + 风格内含义）。
+// 这是修复“concept 编风格、与用户选择完全无关”的关键桁。
+function styleBriefFor(styleId: string): string {
+  const pack = resolveStyle(styleId);
+  if (!pack) return `风格：${styleId}（未知）`;
+  const lines = [
+    `styleId: ${pack.id}`,
+    `styleName: ${pack.name}（${pack.label}）`,
+    `硬约束色盘（必须基于这 3 个颜色设计 concept.palette 与分镜配色）：`,
+    `  bg（底色）  = ${pack.bg}`,
+    `  fg（主字）  = ${pack.fg}`,
+    `  accent（强调）= ${pack.accent}`,
+  ];
+  if (pack.font) lines.push(`字体倾向：${pack.font}`);
+  if (pack.descriptor) lines.push(`风格基因：${pack.descriptor}`);
+  return lines.join("\n");
+}
 
 // 兼容旧引用（decompose/customstyle 已直接从 lib/json 取；这里再导出以防外部引用）。
 export { extractJson } from "@/lib/json";
@@ -103,14 +121,28 @@ export async function generateConcepts(p: ProjectMeta): Promise<Concept[]> {
     "- 三个关键词应是这个方向的视觉/情绪锚点，能指导后续分镜。",
   ].join("\n");
 
+  const styleBrief = styleBriefFor(p.fourPack.styleId);
+  const skills = skillBlockFor("concept", p.videoType);
+
   const prompt = [
     NO_BROWSE,
     `你是资深短视频创意总监。视频类型：${TYPE_LABEL[p.videoType]}。`,
     await materialBlock(p),
     `画幅：${p.aspect}。`,
+    "",
+    "【用户已选定的风格（palette 必须从下面 3 个 hex 衍生，不得自创无关颜色）】",
+    styleBrief,
+    "",
+    skills ? "【品味库参考（方向也得遵守）】" : "",
+    skills,
+    "",
     knowledge,
     "",
-    "请基于以上素材，产出 2 到 3 个差异化的创意方向。",
+    "请基于以上素材 + 风格 + 品味，产出 2 到 3 个差异化的创意方向。",
+    "额外硬约束：",
+    "- palette 必须基于用户选定风格的 bg/fg/accent 衍生（可以描述“以 accent 强调、底色坐镇”等），禁止自创完全无关的颜色。",
+    "- pacing 必须包含一个具体的“平均镜时长建议”（如 快切 ~0.8s/镜 或 中速 ~1.5s/镜），后面分镜会据此定时长。",
+    "- look 必须包含主动效基因（3 个动词组合，如 “fade+slide+typewriter”）——下一步分镜会严格遵守。",
     "严格要求：只输出一个 JSON 数组，不要任何解释或 Markdown。",
     "数组每一项形如：",
     '{"title": "方向标题(中文)", "tone": "调性(中文短语)", "words": ["关键词1","关键词2","关键词3"], "look": "画面长什么样：构图/视觉处理/典型镜头，让外行一看就懂这个方向(2-3句中文)", "palette": "配色倾向(中文描述或 hex 提示)", "pacing": "节奏(如 快切 ~0.8s/镜，硬切为主)", "refs": ["引用到的料块id,如 m1"]}',
@@ -181,9 +213,16 @@ export async function generateStoryboard(
     NO_BROWSE,
     `你是顶级分镜导演（对标 Linear.app / Vercel / Aftermagics 那种品位）。视频类型：${TYPE_LABEL[p.videoType]}。画幅：${p.aspect}。`,
     await materialBlock(p),
-    concept
-      ? `选定方向：${concept.title}（调性：${concept.tone}；关键词：${concept.words.join("、")}）`
-      : "",
+    concept ? [
+      `选定方向：${concept.title}（调性：${concept.tone}；关键词：${concept.words.join("、")}）`,
+      concept.look ? `方向 look（分镜必须遵守这个画面描述）：${concept.look}` : "",
+      concept.palette ? `方向 palette（分镜配色基因）：${concept.palette}` : "",
+      concept.pacing ? `方向 pacing（分镜时长必须匹配）：${concept.pacing}` : "",
+      Array.isArray(concept.refs) && concept.refs.length ?
+        `方向使用的料块（优先在分镜里引用）：${concept.refs.join(", ")}` : "",
+    ].filter(Boolean).join("\n") : "",
+    // 用户选定风格——分镜阶段再次强调（保证与 concept.palette 一致时能双重锁定）
+    `【用户选定风格（需严格匹配）】\n${styleBriefFor(p.fourPack.styleId)}`,
     // 脚本（如果前面过了 script 闸门）：必须咘合进分镜。
     p.script ? `【已确认讲稿（必须逐镜咘合）】\n${p.script}` : "",
     p.vo ? "本片需要配音（vo 必须填写口播文案）。" : "本片无配音（vo 留空字符串）。",
@@ -194,7 +233,7 @@ export async function generateStoryboard(
     skills,
     skills ? "─".repeat(60) : "",
     "",
-    "请基于以上方向 + 料块 + 品味规则，产出 12~16 个分镜（showreel 快切节奏）。",
+    "请基于以上方向 + 料块 + 风格 + 品味规则，产出 12~16 个分镜（showreel 快切节奏）。",
     "严格要求：",
     "1. 只输出一个 JSON 数组，不要解释、不要 Markdown，第一个字符必须是 [",
     "2. 分镜总数 12-16（不可少于 12，不可多于 16）",
