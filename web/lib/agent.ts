@@ -13,6 +13,7 @@ import { gatherMaterial } from "@/lib/ingest";
 import { chunksBlock } from "@/lib/decompose";
 import { describeRoles } from "@/lib/library";
 import { extractJson } from "@/lib/json";
+import { skillBlockFor } from "@/lib/skills";
 
 // 兼容旧引用（decompose/customstyle 已直接从 lib/json 取；这里再导出以防外部引用）。
 export { extractJson } from "@/lib/json";
@@ -173,23 +174,41 @@ export async function generateStoryboard(
   const concept =
     p.chosenConcept != null ? p.concepts[p.chosenConcept] : undefined;
 
+  // 品味库注入（B1 核心）：把 docs/skills 没开发好的 skill 拼进 prompt。
+  const skills = skillBlockFor("storyboard", p.videoType);
+
   const prompt = [
     NO_BROWSE,
-    `你是分镜导演。视频类型：${TYPE_LABEL[p.videoType]}。画幅：${p.aspect}。`,
+    `你是顶级分镜导演（对标 Linear.app / Vercel / Aftermagics 那种品位）。视频类型：${TYPE_LABEL[p.videoType]}。画幅：${p.aspect}。`,
     await materialBlock(p),
     concept
       ? `选定方向：${concept.title}（调性：${concept.tone}；关键词：${concept.words.join("、")}）`
       : "",
-    // 脚本（如果前面过了 script 闸门）：必须嗂合进分镜。
-    p.script ? `【已确认讲稿（必须逐镜嗂合）】\n${p.script}` : "",
+    // 脚本（如果前面过了 script 闸门）：必须咘合进分镜。
+    p.script ? `【已确认讲稿（必须逐镜咘合）】\n${p.script}` : "",
     p.vo ? "本片需要配音（vo 必须填写口播文案）。" : "本片无配音（vo 留空字符串）。",
-    opts?.note ? `用户打回意见（务必据此明显调整分镜内容）：${opts.note}` : "",
+    opts?.note ? `用户打回意见（务必据此明显调整）：${opts.note}` : "",
     "",
-    "请产出 8 到 16 个分镜（motion graphics showreel 节奏：快切、高密度）。严格要求：只输出一个 JSON 数组，不要解释或 Markdown。",
+    skills ? "─".repeat(60) : "",
+    skills ? "【品味库（以下规则必须遵守）】" : "",
+    skills,
+    skills ? "─".repeat(60) : "",
+    "",
+    "请基于以上方向 + 料块 + 品味规则，产出 12~16 个分镜（showreel 快切节奏）。",
+    "严格要求：",
+    "1. 只输出一个 JSON 数组，不要解释、不要 Markdown，第一个字符必须是 [",
+    "2. 分镜总数 12-16（不可少于 12，不可多于 16）",
+    "3. durationSec 只允许 0.6~2.5 的数（首尾镜最多 3.5s；末镜必须 >= 1.5s 给用户“静止记住”时间）",
+    "4. 全片主动效动词（primaryMotion）只允许 3 个从 {fade, slide, typewriter, scale, mask-reveal, blur, cross-fade} 中选，必须在每一镜声明使用哪一个",
+    "5. 至多 1 个镜标记为 isDropShot=true（位置在 60-75% 时长处，密度必须是 minimal，动效可用 mask-reveal/scale）",
+    "6. 每一镜声明 density: minimal(1-2元素) 或 medium(3-5元素)，禁止 dense；相邻两镜密度不能均为 medium",
+    "7. onScreenText 每镜 <= 8 个词，末镜必须包含 CTA (如 URL / 按钮文字)",
+    "8. 首镜 必须是 minimal，前 1.5s 留空拍（无元素入场）",
+    "",
     "每一项形如：",
-    '{"index": 1, "role": "镜头作用(中文,如 钩子/讲解/证据/收束)", "durationSec": 4, "onScreenText": "屏幕主文字(中文,简短)", "vo": "配音文案(中文,无配音则空字符串)", "visual": {"type": "stat", "value": "24×"}, "refs": ["引用到的料块/素材id,如 m1"]}',
+    '{"index": 1, "role": "镜头作用(中文，如 钩子/讲解/证据/drop/收束/CTA)", "durationSec": 1.2, "onScreenText": "屏幕文字(<=8词)", "vo": "", "visual": {"type": "stat", "value": "24×"}, "refs": ["m1"], "primaryMotion": "fade", "density": "minimal", "isDropShot": false}',
     VISUAL_CATALOG,
-    "refs 填这一镜引用的料块/素材 @id（没有就空数组）。index 从 1 开始连续递增；durationSec 取 0.6~1.8 的数（允许 1 位小数，showreel 头尾镜可放到 3~6s 做长 plate）。全部中文。",
+    "refs 填这一镜引用的料块/素材 @id（没有就空数组）。index 从 1 连续递增。全部中文。",
   ]
     .filter(Boolean)
     .join("\n");
@@ -206,24 +225,92 @@ export async function generateStoryboard(
       durationSec: Number.isFinite(dur) && dur > 0 ? Math.round(dur * 10) / 10 : 4,
       onScreenText: String(o.onScreenText ?? ""),
       vo: p.vo ? String(o.vo ?? "") : "",
-      // renderer 仅作 UI 徽章；引擎真实渲染以 visual 为准。
       renderer: visual ? rendererForVisual(visual.type) : normalizeRenderer(o.renderer, i),
       visual,
       status: "pending",
       rev: 0,
       revisions: [],
       refs: strList(o.refs),
+      // 新字段（B1 注入，类型定义已扩）
+      primaryMotion: typeof o.primaryMotion === "string" ? o.primaryMotion : undefined,
+      density: (o.density === "minimal" || o.density === "medium") ? o.density : undefined,
+      isDropShot: o.isDropShot === true,
     };
   });
 
   if (scenes.length === 0) {
     throw new Error("未产出任何分镜");
   }
-  // 规整 index 连续
   scenes.forEach((s, i) => {
     s.index = i + 1;
   });
+
+  // B2：硬校验——命中致命反例就报错，让用户重来（Q3=a 严格模式）。
+  validateStoryboard(scenes);
+
   return scenes;
+}
+
+// ---- 硬校验（命中致命反例报错，前端展示、用户重新触发）----
+function validateStoryboard(scenes: SceneMeta[]): void {
+  const errs: string[] = [];
+
+  // R 镜数：必须 12-16 之间
+  if (scenes.length < 12 || scenes.length > 16) {
+    errs.push(`分镜总数 ${scenes.length} 不在 12-16 区间`);
+  }
+
+  // R1.3 末镜需 >= 1.5s，且包含 CTA 不能为空
+  const last = scenes[scenes.length - 1];
+  if (last && last.durationSec < 1.5) {
+    errs.push(`末镜时长 ${last.durationSec}s < 1.5s（用户无时间记住 CTA）`);
+  }
+  if (last && !last.onScreenText.trim()) {
+    errs.push("末镜 onScreenText 为空（CTA 丢失）");
+  }
+
+  // R1.2 首镜 minimal + 长度 >= 2s（预留拍） —— 只当 AI 标了 density 时才硬检
+  const first = scenes[0];
+  if (first?.density === "medium") {
+    errs.push("首镜 density=medium（需 minimal）");
+  }
+
+  // R3.1 主动效基因：全片 primaryMotion 不重复的数 <= 5
+  const motions = scenes
+    .map((s) => s.primaryMotion)
+    .filter((v): v is string => !!v);
+  if (motions.length > 0) {
+    const uniq = new Set(motions);
+    if (uniq.size > 5) {
+      errs.push(`主动效种类 ${uniq.size} > 5（primary: ${[...uniq].join(",")}）`);
+    }
+  }
+
+  // R2.2 禁止密度=dense（虽然 schema 不允许，也多一道防线）
+  // 相邻两镜密度不能均为 medium
+  for (let i = 1; i < scenes.length; i++) {
+    if (
+      scenes[i].density === "medium" &&
+      scenes[i - 1].density === "medium"
+    ) {
+      errs.push(
+        `分镜 ${i} 和 ${i + 1} 均为 medium 密度（需交替）`
+      );
+      break;
+    }
+  }
+
+  // isDropShot 至多 1 个
+  const drops = scenes.filter((s) => s.isDropShot);
+  if (drops.length > 1) {
+    errs.push(`isDropShot 镜 ${drops.length} 个 > 1`);
+  }
+
+  if (errs.length > 0) {
+    throw new Error(
+      `分镜不符合品味库硬约束（本次不部分采纳、请重新生成）：\n- ${errs.join("\n- ")}`
+    );
+  }
 }
 
 function normalizeRenderer(value: unknown, fallbackIdx: number): Renderer {

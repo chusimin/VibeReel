@@ -377,6 +377,28 @@ export async function handleEdit(id: string, body: EditBody): Promise<void> {
   });
 }
 
+// ---- 失败后重试分镜（B1 测试阶段）：stage=failed 时直接开一次分镜重生。
+// 需要 concept 已选定（否则回退到 concept 闸门重选）。
+export async function retryStoryboard(id: string): Promise<void> {
+  await withLock(id, async () => {
+    const p = getProject(id);
+    if (!p) return;
+    if (p.chosenConcept == null) {
+      p.stage = "concept";
+      p.awaitingGate = "concept";
+      p.error = null;
+      push(p, "请先选定创意方向");
+      return;
+    }
+    try {
+      p.error = null;
+      await runStoryboard(p);
+    } catch (err) {
+      fail(p, err);
+    }
+  });
+}
+
 // ---- 每步可返回（#6）：按当前 stage 回退到上一个闸门并重置下游 ----
 export async function goBack(id: string): Promise<void> {
   await withLock(id, async () => {

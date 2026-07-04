@@ -157,6 +157,10 @@ export interface SceneMeta {
   rev: number;
   revisions: Revision[];
   refs?: string[]; // 引用到的料块/素材 id（#5，可空）
+  // ── B1 新增字段（品味库硬约束） ──
+  primaryMotion?: string; // 主动效动词：fade/slide/typewriter/scale/mask-reveal/blur/cross-fade
+  density?: "minimal" | "medium"; // 视觉密度（禁止 dense）
+  isDropShot?: boolean; // 是否为 drop 高潮镜（全片至多 1 个）
 }
 
 export interface ProjectMeta {

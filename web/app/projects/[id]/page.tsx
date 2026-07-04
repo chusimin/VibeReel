@@ -1502,14 +1502,37 @@ function FailedPanel({
   project: ProjectMeta;
   onDone: () => void;
 }) {
+  const [busy, setBusy] = useState(false);
+  const canRetryStoryboard = p.chosenConcept != null;
+  async function retry() {
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/projects/${p.projectId}/retry-storyboard`, {
+        method: "POST",
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        alert(`重试失败：${j.error || r.status}`);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <div className="fade">
-      <div className="banner err" style={{ marginBottom: 20 }}>
+      <div className="banner err" style={{ marginBottom: 20, whiteSpace: "pre-wrap" }}>
         生成失败：{p.error || "未知错误"}
       </div>
-      <button className="btn ghost" onClick={onDone}>
-        返回项目列表
-      </button>
+      <div style={{ display: "flex", gap: 10 }}>
+        {canRetryStoryboard && (
+          <button className="btn" onClick={retry} disabled={busy}>
+            {busy ? "重新生成中…" : "重新生成分镜"}
+          </button>
+        )}
+        <button className="btn ghost" onClick={onDone}>
+          返回项目列表
+        </button>
+      </div>
     </div>
   );
 }

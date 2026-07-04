@@ -8,9 +8,10 @@
 //   · 下次切生产：把 VR_LLM=api + ANTHROPIC_API_KEY 配上即可，业务零改动。
 //
 // 切换开关（env）：
-//   VR_LLM   = "cli"（默认）| "api"
+//   VR_LLM   = "cli"（默认）| "api" | "openrouter"
 //   CLAUDE_BIN  本机 claude 路径（cli 用）
 //   ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL / ANTHROPIC_VERSION（api 用）
+//   OPENROUTER_API_KEY / OPENROUTER_MODEL（openrouter 用）
 //   VR_MODEL    默认模型档（sonnet/opus/haiku 或完整 model id）
 // ============================================================
 
@@ -180,13 +181,81 @@ class ApiProvider implements LlmProvider {
   }
 }
 
+// ============================================================
+// Provider C —— OpenRouter（临时/测试，支持 Anthropic Claude 型号代理）
+//   VR_LLM=openrouter + OPENROUTER_API_KEY 即可。
+//   model 默认映射：sonnet → anthropic/claude-sonnet-4-5
+// ============================================================
+const OPENROUTER_MODEL_MAP: Record<string, string> = {
+  sonnet: "anthropic/claude-sonnet-4.5",
+  opus: "anthropic/claude-opus-4.1",
+  haiku: "anthropic/claude-haiku-4.5",
+};
+
+interface OpenRouterResponse {
+  choices?: Array<{ message?: { content?: string } }>;
+  error?: { message?: string };
+}
+
+class OpenRouterProvider implements LlmProvider {
+  readonly name = "openrouter";
+
+  async complete(prompt: string, opts: LlmOptions): Promise<string> {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (!key) {
+      throw new Error(
+        "VR_LLM=openrouter 但未设置 OPENROUTER_API_KEY"
+      );
+    }
+    const model =
+      process.env.OPENROUTER_MODEL ||
+      OPENROUTER_MODEL_MAP[opts.model] ||
+      opts.model;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 180000);
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://vibereel.local",
+          "X-Title": "VibeReel",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: opts.maxTokens ?? 4096,
+          messages: [
+            ...(opts.system ? [{ role: "system", content: opts.system }] : []),
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
+      const data = (await res.json()) as OpenRouterResponse;
+      if (!res.ok) {
+        throw new Error(
+          `OpenRouter ${res.status}: ${data?.error?.message ?? "未知错误"}`
+        );
+      }
+      const text = data.choices?.[0]?.message?.content ?? "";
+      if (!text) throw new Error("OpenRouter 返回空内容");
+      return text;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}
+
 // ---- 单例选择（HMR 安全）----
 const g = globalThis as unknown as { __vrLlm?: LlmProvider };
 
 export function getProvider(): LlmProvider {
   if (g.__vrLlm) return g.__vrLlm;
   const mode = (process.env.VR_LLM || "cli").toLowerCase();
-  g.__vrLlm = mode === "api" ? new ApiProvider() : new CliProvider();
+  if (mode === "api") g.__vrLlm = new ApiProvider();
+  else if (mode === "openrouter") g.__vrLlm = new OpenRouterProvider();
+  else g.__vrLlm = new CliProvider();
   return g.__vrLlm;
 }
 
