@@ -183,6 +183,9 @@ export interface ProjectMeta {
   stage: Stage;
   concepts: Concept[]; // 闸门① 候选
   chosenConcept: number | null;
+  // 脚本文本（科普/教学 script 闸门用；showreel 保留字段但不用）。
+  // 之前存在 globalThis map 里，重启会丢；改为 project.json 持久化。
+  script: string | null;
   scenes: SceneMeta[];
   error: string | null;
   outputs: { mp4?: string; srt?: string; zip?: string };

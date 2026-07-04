@@ -19,18 +19,11 @@ import { emit } from "@/lib/bus";
 // HMR 安全 + 并发锁：同一项目串行处理，避免重入。
 const g = globalThis as unknown as {
   __vrLocks?: Set<string>;
-  __vrScripts?: Map<string, string>;
 };
 
 function locks(): Set<string> {
   if (!g.__vrLocks) g.__vrLocks = new Set<string>();
   return g.__vrLocks;
-}
-
-// 讲稿文本存内存（POC：ProjectMeta 无字段承载，挂 globalThis）。
-function scripts(): Map<string, string> {
-  if (!g.__vrScripts) g.__vrScripts = new Map<string, string>();
-  return g.__vrScripts;
 }
 
 async function withLock(id: string, fn: () => Promise<void>): Promise<void> {
@@ -217,7 +210,7 @@ export async function handleGate(id: string, body: GateBody): Promise<void> {
             p.awaitingGate = null;
             push(p, "正在撰写讲稿…", 38);
             const script = await generateScript(p);
-            scripts().set(id, script);
+            p.script = script;
             p.stage = "script";
             p.awaitingGate = "script";
             push(p, "讲稿已生成，请确认或打回", 42);
@@ -236,7 +229,7 @@ export async function handleGate(id: string, body: GateBody): Promise<void> {
             p.awaitingGate = null;
             push(p, "正在按意见重写讲稿…", 38);
             const script = await generateScript(p, { note: body.note });
-            scripts().set(id, script);
+            p.script = script;
             p.stage = "script";
             p.awaitingGate = "script";
             push(p, "讲稿已重写，请确认或打回", 42);

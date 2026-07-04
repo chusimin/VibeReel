@@ -154,6 +154,7 @@ export function createProject(body: CreateProjectBody): ProjectMeta {
     stage: "ingesting",
     concepts: [],
     chosenConcept: null,
+    script: null,
     scenes: [],
     error: null,
     outputs: {},
@@ -180,6 +181,7 @@ function migrate(raw: Record<string, unknown>): ProjectMeta {
       : [];
   }
   if (p.material === undefined) p.material = null;
+  if (p.script === undefined) p.script = null;
   if (!Array.isArray(p.assets)) p.assets = [];
   if (!Array.isArray(p.roleRefs)) p.roleRefs = [];
   if (typeof p.subtitle !== "boolean") p.subtitle = false;

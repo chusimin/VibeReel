@@ -180,6 +180,8 @@ export async function generateStoryboard(
     concept
       ? `选定方向：${concept.title}（调性：${concept.tone}；关键词：${concept.words.join("、")}）`
       : "",
+    // 脚本（如果前面过了 script 闸门）：必须嗂合进分镜。
+    p.script ? `【已确认讲稿（必须逐镜嗂合）】\n${p.script}` : "",
     p.vo ? "本片需要配音（vo 必须填写口播文案）。" : "本片无配音（vo 留空字符串）。",
     opts?.note ? `用户打回意见（务必据此明显调整分镜内容）：${opts.note}` : "",
     "",
